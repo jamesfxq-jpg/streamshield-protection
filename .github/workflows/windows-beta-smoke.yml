@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/windows-beta-smoke.yml'
       - 'tests/windows-beta-smoke.ps1'
+      - 'tests/windows-launch-diagnostics.ps1'
       - 'release.json'
       - 'releases/**'
 
@@ -38,3 +39,7 @@ jobs:
       - name: Test the unchanged published installer without KICK access
         shell: pwsh
         run: ./tests/windows-beta-smoke.ps1
+      - name: Diagnose isolated startup failure
+        if: failure()
+        shell: pwsh
+        run: ./tests/windows-launch-diagnostics.ps1
