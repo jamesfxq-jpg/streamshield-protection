@@ -39,7 +39,7 @@ metadata = {
     "sha256": digest,
     "size_bytes": len(payload),
     "published_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-    "notes": "Adds clearer streamer/moderator workflow, Moderator Guide buttons, ready-to-paste verification messages, and hash-only network identity: full viewer IPs are not stored or shown. Separate remote moderator logins are not yet included.",
+    "notes": "Adds streamer-selected remote moderator access with a restricted Mod Dashboard and Compact Pop-Out, ready-to-paste verification messages, and hash-only network identity: full viewer IPs are not stored or shown.",
 }
 (ROOT / "release.json").write_text(json.dumps(metadata, indent=2) + "\n")
 RELEASE.with_suffix(RELEASE.suffix + ".sha256").write_text(f"{digest}  {FILENAME}\n")
