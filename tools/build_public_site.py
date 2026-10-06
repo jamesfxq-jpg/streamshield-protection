@@ -23,6 +23,8 @@ for name in [
     "beta.html",
     "beta-thanks.html",
     "mods.html",
+    "mod.html",
+    "mod-panel.html",
     "release.json",
 ]:
     src = ROOT / name
