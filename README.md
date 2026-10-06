@@ -25,7 +25,7 @@ To update an existing installation, stop StreamShield, extract the new ZIP, and 
 
 The channel connection requests account/channel reading, event subscriptions, account moderation, and chat-message moderation permissions. Automatic user timeouts are a separate opt-in. Optional Network Protection and exact-network automatic bans are also separate settings; review them before enabling them. A dedicated moderator account, if configured, is optional and does not replace OAuth authorization.
 
-Viewer verification requires an explicit consent step before KICK authorization and optional network/browser-token recording. KICK does not supply viewer IP addresses to StreamShield. An IP observation comes from the viewer using the verification gateway; targeted verification may also use a random first-party browser token. Shared or reassigned IP addresses and browser-token matches are risk signals, not proof that two accounts belong to the same person. Browser tokens are not hardware identifiers and can be reset by clearing site data or changing browsers.
+Viewer verification requires an explicit consent step before KICK authorization and optional network/browser-token recording. KICK does not supply viewer IP addresses to StreamShield. During verification, the connection address is processed transiently to create a keyed one-way network identifier and then discarded; full viewer IP addresses are not stored or shown. Targeted verification may also use a random first-party browser token. Shared or reassigned IP addresses and browser-token matches are risk signals, not proof that two accounts belong to the same person. Browser tokens are not hardware identifiers and can be reset by clearing site data or changing browsers.
 
 StreamShield cannot stop someone from sending fake follows to KICK's servers. Its follow protection detects and documents suspicious activity. It does not create viewers, followers, messages, or other artificial engagement. See the [privacy policy](privacy.html) and [terms](terms.html) for data handling and use conditions.
 
@@ -95,8 +95,13 @@ All five scripts passed on both runtime versions in the follow-up; the moderatio
 
 ### Published Windows installer check
 
-The unchanged Beta 10 ZIP passed fresh installation and reinstallation on a GitHub-hosted **Windows Server 2025** runner using its own pinned Node.js runtime. Checks included local startup/HTML, unauthenticated history rejection, desktop-launcher creation, intact OBS assets, and preservation of a synthetic data file. No KICK account was connected, and application cloud access was disabled. This is not a Windows 10/11 interactive desktop test or a real-account migration test.
+The earlier Beta 10 ZIP passed fresh installation and reinstallation on a GitHub-hosted **Windows Server 2025** runner using its own pinned Node.js runtime. Checks included local startup/HTML, unauthenticated history rejection, desktop-launcher creation, intact OBS assets, and preservation of a synthetic data file. No KICK account was connected, and application cloud access was disabled. This is not a Windows 10/11 interactive desktop test or a real-account migration test.
 
 The **Windows published beta smoke test** GitHub Actions workflow runs on relevant main-branch release/test changes and can be manually dispatched. It downloads the published ZIP and checks its manifest hash before running the unchanged installer in a disposable profile. The workflow does not publish, deploy, or moderate a channel. Startup failures remain failures; the separate diagnostics step only collects bounded test logs.
 
 Before relying on the beta for a live channel, verify the user's Windows desktop experience and, on an explicitly authorized test channel, check connection, signed events, a controlled verification request, clean chat restoration, permanent-ban preservation, manual recovery, and the end-of-stream report. Keep the runtime data and installation-specific encryption key private and out of release archives.
+
+
+### Beta 11 privacy hardening
+
+Beta 11 no longer persists encrypted full viewer IP addresses. Verification uses the connecting address only long enough to derive a keyed HMAC network identifier for exact-match ban-evasion checks. Existing encrypted IP material was erased from the private network tables, the ciphertext columns were removed, and the reversible IP encryption key/helpers were removed. StreamShield UI and APIs expose only masked network IDs, not full viewer IP addresses.
