@@ -18,7 +18,7 @@ const MAX_BODY = 512 * 1024;
 const BOOTSTRAP_HASH = "c0f15b44348bad8ddcb6d5edb43949aed8d7fccc991f721504bdebded914fc56";
 const OAUTH_CALLBACK = "https://blrdvuhnxtwnsphdxpkg.supabase.co/functions/v1/streamshield-backend/oauth/kick/callback";
 const PUBLIC_WEB_ORIGIN = "https://streamshield-protection-public.vercel.app";
-const KICK_SCOPES = ["user:read","channel:read","events:subscribe","moderation:ban","moderation:chat_message:manage"];
+const KICK_SCOPES = ["user:read","channel:read","events:subscribe","chat:write","moderation:ban","moderation:chat_message:manage"];
 const NETWORK_VIEWER_SCOPES = ["user:read"];
 let kickKey: CryptoKey | null = null;
 let kickKeyFetchedAt = 0;
@@ -572,6 +572,7 @@ async function handleModeratorCommand(req:Request) {
     if(!Number.isFinite(userId)||userId<=0) return modJson(400,{error:"valid_user_required"});
     payload.userId=Math.trunc(userId);
     payload.username=String(body?.username??"").slice(0,100);
+    if(action==="verification_request") payload.messageId=String(body?.messageId??"").slice(0,200);
   }
   if(action==="delete_message") {
     const messageId=String(body?.messageId??"").slice(0,200);
