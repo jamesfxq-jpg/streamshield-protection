@@ -53,7 +53,7 @@ function Invoke-PublishedInstaller([string]$Label) {
         throw "$Label installer exceeded three minutes."
     }
     if ($process.ExitCode -ne 0) {
-        Get-Content $stdout, $stderr -ErrorAction SilentlyContinue | Write-Host
+        Get-Content $stdout, $stderr -Tail 45 -ErrorAction SilentlyContinue | Write-Host
         throw "$Label installer returned exit code $($process.ExitCode)."
     }
     $health = $null
@@ -61,6 +61,7 @@ function Invoke-PublishedInstaller([string]$Label) {
         try { $health = Invoke-RestMethod $healthUrl -TimeoutSec 2; break }
         catch { Start-Sleep -Milliseconds 500 }
     }
+    if ($null -eq $health) { Get-Content $stdout, $stderr -Tail 45 -ErrorAction SilentlyContinue | Write-Host }
     Assert-Check ($null -ne $health -and $health.ok -eq $true) "${Label}: installed application starts and reports health."
     Assert-Check ($health.sessions -eq 0 -and $health.publicOauthBroker -eq $false -and $health.remoteBackendConfigured -eq $false -and $health.kickConfigured -eq $false) "${Label}: no account is connected and KICK/cloud access is disabled."
     Assert-Check ($health.encryptedStateAtRest -eq $true) "${Label}: encrypted-state support is enabled."
@@ -107,9 +108,11 @@ try {
     $env:KICK_CLIENT_SECRET = ''
     $env:KICK_WEBHOOK_PUBLIC_URL = ''
     # Defense in depth: reject all app fetches, without changing distributed files.
+    # NODE_OPTIONS treats backslashes inside quotes as escape characters; normalize
+    # only the preload argument, retaining the same network-blocking test behavior.
     $guardPath = Join-Path $work 'no-network.cjs'
     Set-Content $guardPath 'globalThis.fetch = async () => { throw new Error("Windows smoke test: app network access is disabled"); };' -Encoding utf8
-    $env:NODE_OPTIONS = '--require="' + $guardPath + '"'
+    $env:NODE_OPTIONS = '--require="' + $guardPath.Replace('\','/') + '"'
 
     Invoke-PublishedInstaller 'Fresh installation'
     Assert-Check (Test-Path $runtime) 'Installer supplies its own Node.js runtime.'
