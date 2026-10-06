@@ -35,7 +35,7 @@ The beta is for finding real-world reliability, usability and moderation problem
 1. Open **Recent KICK Chat** in the full StreamShield dashboard or **Compact Control**.
 2. Find the specific chatter and click **Require Verification** beside that KICK account.
 3. StreamShield creates a targeted verification request and places a temporary StreamShield-owned chat restriction on that account while the request is pending.
-4. Copy the one-time verification link from the verification queue and send it directly to that viewer. KICK does not currently provide third-party apps a private per-viewer popup that StreamShield can force onto the viewer.
+4. When **Require Verification** succeeds, StreamShield copies the one-time verification link to the moderator’s clipboard. StreamShield does **not** automatically send a private KICK message. Paste the link into KICK chat while mentioning the selected viewer, or send it through a private contact method you already use. The request is bound to the selected KICK user ID, so a different KICK account cannot complete that targeted verification.
 5. The viewer opens the link, selects **Continue with KICK**, and completes KICK authorization using the account named by the request.
 6. StreamShield records the verification outcome. A clean result can automatically release the temporary restriction when StreamShield still owns that restriction and the relay/event health requirements are satisfied.
 7. A blocked-network or blocked first-party browser-token signal is a moderation signal that can remain locked for review. An exact blocked-network match can also use the optional exact-network auto-ban setting.
