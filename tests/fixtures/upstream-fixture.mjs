@@ -6,7 +6,7 @@ globalThis.fetch=async (raw,init={})=>{
   if(p.endsWith('/events/subscriptions')) return response({data:events.map(event=>({event,version:1,method:'webhook'}))});
   if(p.endsWith('/livestreams')) return response({data:[]});
   if(p.endsWith('/moderation/bans')) {process.stdout.write('MOCK_KICK_'+method+'\n');return response({data:{}});}
-  if(p.endsWith('/chat')&&method==='POST'){process.stdout.write('MOCK_KICK_CHAT_POST\n');return response({data:{is_sent:true,message_id:'11111111-1111-4111-8111-111111111111'}});}
+  if(p.endsWith('/chat')&&method==='POST'){const body=JSON.parse(String(init.body||'{}'));if(body.broadcaster_user_id!==910000001||body.type!=='user'||body.reply_to_message_id!=='33333333-3333-4333-8333-333333333333'||!String(body.content||'').includes('@qa_verify')||!String(body.content||'').includes('Continue with KICK'))throw new Error('Invalid KICK verification chat payload: '+JSON.stringify(body));process.stdout.write('MOCK_KICK_CHAT_POST_VALID\n');return response({data:{is_sent:true,message_id:'11111111-1111-4111-8111-111111111111'}});}
  }
  if(url.hostname==='qa.invalid'){
   if(p.endsWith('/release/latest'))return response({ok:true,release:null});
