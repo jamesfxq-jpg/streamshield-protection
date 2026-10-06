@@ -12,7 +12,8 @@ globalThis.fetch=async (raw,init={})=>{
   if(p.endsWith('/events'))return response({ok:true,events:[]});
   if(p.endsWith('/network/status'))return response({ok:true,network:{enabled:false,auto_ban_exact_network_match:false,blocked_networks:1}});
   if(p.endsWith('/network/history'))return response({ok:true,history:[{network_hash:'a'.repeat(64),ip:'192.0.2.20',blocked:true}]});
-  if(p.endsWith('/network/queue')||p.endsWith('/verification/queue')||p.endsWith('/verification/recent'))return response({ok:true,items:[]});
+  if(p.endsWith('/network/queue')||p.endsWith('/verification/queue')||p.endsWith('/verification/recent')||p.endsWith('/moderator/install/commands'))return response({ok:true,items:[]});
+  if(p.endsWith('/moderator/install/access'))return response({ok:true,moderators:[],pending_invites:[]});
   if(p.endsWith('/verification/complete'))return response({ok:true,completed:true});
   if(p.endsWith('/status'))return response({ok:true,channel:{broadcaster_id:910000001}});
  }
