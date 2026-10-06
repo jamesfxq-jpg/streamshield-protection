@@ -1,6 +1,6 @@
 # StreamShield Protection
 
-**0.6.0-beta.10** — a Windows desktop application for monitoring and moderating a connected KICK channel, with a public download site and a cloud OAuth/webhook service.
+**0.6.0-beta.11** — a Windows desktop application for monitoring and moderating a connected KICK channel, with a public download site and a cloud OAuth/webhook service.
 
 Public website: [streamshield-protection-public.vercel.app](https://streamshield-protection-public.vercel.app)
 
@@ -19,7 +19,7 @@ To update an existing installation, stop StreamShield, extract the new ZIP, and 
 ## Features and limits
 
 - **Follow Shield** records suspicious follow bursts for review. **Chat Raid Shield** and **Link / Scam Shield** can delete qualifying spam using the connected channel's moderation authorization.
-- **Compact Control** provides recent chat, verification requests, blocked verified networks, account moderation, offender case files, and supported recovery actions.
+- **Compact Control** provides recent chat, verification requests, blocked verified networks, account moderation, offender case files, supported recovery actions, and a one-click Moderator Guide. Targeted verification now copies a ready-to-paste @username message plus the one-time link.
 - **Stream reports** collect local protection events and offer PDF export, a summary, and an evidence integrity seal. A matching seal checks report integrity; it does not identify an attacker or independently validate the events.
 - **Recovery Center** can reverse supported recent actions. Removing a StreamShield network block with **UN-IP BAN** and removing a KICK account ban are separate actions.
 
