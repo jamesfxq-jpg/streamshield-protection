@@ -228,7 +228,7 @@ function reportSealMatches(report) {
     const fresh = makeEvidenceSeal(report);
     return timingSafeEqual(Buffer.from(fresh.evidenceSeal, "hex"), Buffer.from(String(report.evidenceSeal), "hex"));
 }
-const APP_VERSION = "0.6.0-beta.11";
+const APP_VERSION = "0.6.0-beta.12";
 let latestRelease = null;
 let lastReleaseCheckAt = 0;
 function versionTuple(v) {
