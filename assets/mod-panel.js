@@ -49,9 +49,11 @@
       const done=await waitCommand(cmd.command.id);
       if(action==="verification_request"){
         const message=done.result?.ready_message||"";
-        if(message){
-          try{await navigator.clipboard.writeText(message);alert("Verification message copied. Paste it to the selected viewer.");}
-          catch{prompt("Copy and send this verification message:",message);}
+        if(done.result?.chat_message_sent){
+          alert("Verification required. StreamShield automatically replied to that viewer in KICK chat with the one-time link.");
+        } else if(message){
+          try{await navigator.clipboard.writeText(message);alert("KICK could not auto-send the verification reply. The fallback message was copied.");}
+          catch{prompt("KICK could not auto-send. Copy this verification message:",message);}
         }
       } else if(action==="case_file"){
         showCase(done.result?.caseFile||{});
