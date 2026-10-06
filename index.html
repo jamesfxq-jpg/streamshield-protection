@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer">
-<title>StreamShield Protection — Windows Beta 10 for KICK</title>
-<meta name="description" content="StreamShield Windows Beta 10: suspicious engagement monitoring, compact moderation controls, readiness checks, incident reports, and optional viewer verification for KICK streamers.">
+<title>StreamShield Protection — Windows Beta 11 for KICK</title>
+<meta name="description" content="StreamShield Windows Beta 11: suspicious engagement monitoring, compact moderation controls, readiness checks, incident reports, and optional viewer verification for KICK streamers.">
 <link rel="canonical" href="https://streamshield-protection-public.vercel.app/">
 <link rel="icon" href="/assets/brand/streamshield-shield-badge.png" type="image/png">
 <link rel="stylesheet" href="/assets/site.css">
@@ -17,11 +17,11 @@
 <main id="main">
 <section class="hero">
 <img class="hero-logo" src="/assets/brand/streamshield-shield-badge.png" width="104" height="93" alt="StreamShield shield">
-<span class="badge">WINDOWS · 0.6.0-BETA.10</span>
+<span class="badge">WINDOWS · 0.6.0-BETA.11</span>
 <h1>Keep your attention on the stream.</h1>
 <p class="lead">Monitor suspicious KICK engagement, manage moderation from a compact control window, and keep clear evidence when an incident happens.</p>
-<div class="actions"><a class="button" href="/releases/StreamShield-Protection-0.6.0-beta.10-Windows.zip" download>Download Windows Beta 10</a><a class="button secondary" href="#install">Get set up</a><a class="button secondary" href="/beta">Beta tester guide</a></div>
-<p class="mini">Version 0.6.0-beta.10 · Windows ZIP · Beta software</p>
+<div class="actions"><a class="button" href="/releases/StreamShield-Protection-0.6.0-beta.11-Windows.zip" download>Download Windows Beta 11</a><a class="button secondary" href="#install">Get set up</a><a class="button secondary" href="/beta">Beta tester guide</a></div>
+<p class="mini">Version 0.6.0-beta.11 · Windows ZIP · Beta software</p>
 </section>
 <div class="notice"><p><strong>What protection means:</strong> StreamShield detects patterns and uses supported moderation controls. It cannot prevent platform-side fake follows, remove all artificial viewers, or obtain KICK viewers’ IP addresses. An anomaly score is a reason to investigate, not proof of misconduct.</p></div>
 <section id="features" class="section" aria-labelledby="features-title">
@@ -67,14 +67,14 @@
 <section id="install" class="section card" aria-labelledby="install-title">
 <div class="eyebrow">Start here</div><h2 id="install-title">Four steps to your first check.</h2>
 <ol class="steps">
-<li><div><strong>Download Beta 10 and choose Extract All.</strong><p>In Windows File Explorer, right-click the downloaded ZIP and select <strong>Extract All</strong>. Open the extracted folder before running anything.</p></div></li>
+<li><div><strong>Download Beta 11 and choose Extract All.</strong><p>In Windows File Explorer, right-click the downloaded ZIP and select <strong>Extract All</strong>. Open the extracted folder before running anything.</p></div></li>
 <li><div><strong>Run Install StreamShield.cmd.</strong><p>Double-click <strong>Install StreamShield.cmd</strong> in that folder and let installation finish. Launch StreamShield using the shortcut the installer creates.</p></div></li>
 <li><div><strong>Select Connect KICK.</strong><p>Review the permissions on KICK’s official authorization page and approve the connection. Return to StreamShield after authorization completes.</p></div></li>
 <li><div><strong>Run the Pre-Stream Check.</strong><p>Read the result for each check and resolve any connection or monitoring problem. Keep StreamShield running during your stream; live-only checks need a real live stream and real events.</p></div></li>
 </ol>
-<p class="mini">Already using an earlier beta? Close it before running the Beta 10 installer, then reconnect KICK and rerun the check.</p>
+<p class="mini">Already using an earlier beta? Close it before running the Beta 11 installer, then reconnect KICK and rerun the check.</p>
 <div class="notice"><p><strong>Windows publisher notice:</strong> this beta is not yet commercially code signed. If Windows blocks installation, leave system security protections enabled and contact the person who supplied your beta access.</p></div>
-<details class="release-details"><summary>Download details and release verification</summary><p class="mini">File: <span class="code">StreamShield-Protection-0.6.0-beta.10-Windows.zip</span><br>Version: <strong>0.6.0-beta.10</strong></p><p class="mini">SHA-256: <span class="code" id="release-sha256">7c982c9c47d616a8a25c6761e95c706f0b166a1da4cbf2bc563caeabd48f8358</span></p><p><a href="/release.json">View release metadata</a></p></details>
+<details class="release-details"><summary>Download details and release verification</summary><p class="mini">File: <span class="code">StreamShield-Protection-0.6.0-beta.11-Windows.zip</span><br>Version: <strong>0.6.0-beta.11</strong></p><p class="mini">SHA-256: <span class="code" id="release-sha256">7c982c9c47d616a8a25c6761e95c706f0b166a1da4cbf2bc563caeabd48f8358</span></p><p><a href="/release.json">View release metadata</a></p></details>
 </section>
 <section id="use" class="section card" aria-labelledby="use-title"><div class="eyebrow">While you stream</div><h2 id="use-title">A practical routine.</h2>
 <ul class="list">
@@ -98,7 +98,7 @@
 <section id="troubleshooting" class="section card" aria-labelledby="troubleshooting-title"><div class="eyebrow">Troubleshooting</div><h2 id="troubleshooting-title">If a check does not pass.</h2><ul class="list"><li><strong>KICK is disconnected:</strong> reopen StreamShield, select Connect KICK, and complete authorization again.</li><li><strong>Monitoring is degraded:</strong> read the specific failed check and Event Board message. Confirm your internet connection, then rerun the check.</li><li><strong>Live monitoring is pending:</strong> keep the app open during your next normal stream. Offline channels may have no viewer count or recent live events.</li><li><strong>A viewer cannot verify:</strong> after clicking Require Verification, StreamShield copies the newest one-time link to the moderator’s clipboard. Paste that link to the selected viewer manually. The viewer must continue with the exact KICK account selected by the request; another account is rejected. If the request expired or was released, create a new request.</li><li><strong>A moderation mistake happened:</strong> use Recovery Center or the specific account/network control, then confirm the updated status.</li></ul></section>
 <section class="section card tint"><div class="eyebrow">Privacy by scope</div><h2>Know what is stored.</h2><p>Streamer OAuth tokens are encrypted on the streamer’s PC. The cloud broker processes authorization and refresh data transiently. Buffered public chat text expires after 15 minutes and event rows after 24 hours. Optional viewer verification adds an encrypted exact IP record; targeted verification also adds a hashed random browser token, with a cookie lifetime of up to 90 days.</p><p><a href="/privacy">Read Privacy &amp; Data Controls</a> · <a href="/terms">Read Terms &amp; Safe Use</a></p></section>
 </main>
-<footer class="site-footer">StreamShield Protection · Windows 0.6.0-beta.10 · Defensive use only.<br>KICK controls platform enforcement, monetization, and Partner Program decisions. StreamShield is not a KICK service.<div class="footer-links"><a href="/mods">Moderator Guide</a><a href="/beta">Beta testing &amp; feedback</a><a href="/privacy">Privacy</a><a href="/terms">Terms &amp; Safe Use</a><a href="#install">Installation</a></div></footer>
+<footer class="site-footer">StreamShield Protection · Windows 0.6.0-beta.11 · Defensive use only.<br>KICK controls platform enforcement, monetization, and Partner Program decisions. StreamShield is not a KICK service.<div class="footer-links"><a href="/mods">Moderator Guide</a><a href="/beta">Beta testing &amp; feedback</a><a href="/privacy">Privacy</a><a href="/terms">Terms &amp; Safe Use</a><a href="#install">Installation</a></div></footer>
 </div>
 </body>
 </html>
