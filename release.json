@@ -1,10 +1,10 @@
 {
-  "version": "0.6.0-beta.11",
+  "version": "0.6.0-beta.12",
   "channel": "beta",
-  "filename": "StreamShield-Protection-0.6.0-beta.11-Windows.zip",
-  "download_url": "https://streamshield-protection-public.vercel.app/releases/StreamShield-Protection-0.6.0-beta.11-Windows.zip",
-  "sha256": "4819d3994490beb3eb75e0dfca9c236158e66b648a927de1efb2e0a5a6f9f36f",
-  "size_bytes": 2730164,
-  "published_at": "2026-10-06T03:43:54Z",
-  "notes": "Adds streamer-selected remote moderator access with a restricted Mod Dashboard and Compact Pop-Out, ready-to-paste verification messages, and hash-only network identity: full viewer IPs are not stored or shown."
+  "filename": "StreamShield-Protection-0.6.0-beta.12-Windows.zip",
+  "download_url": "https://streamshield-protection-public.vercel.app/releases/StreamShield-Protection-0.6.0-beta.12-Windows.zip",
+  "sha256": "2e9d0e557cf2b37e6a27ff834b621b5ddb6857be4af000b0f12af47b2d6e1292",
+  "size_bytes": 2731307,
+  "published_at": "2026-10-06T04:07:21Z",
+  "notes": "Adds automatic KICK chat replies for targeted verification using chat:write, with reply-to-viewer delivery and clipboard fallback, while retaining selected remote moderator access and hash-only network identity."
 }
