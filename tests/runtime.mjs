@@ -37,7 +37,7 @@ try{
  const pdf=await fetch(base+report.report.pdfUrl,{headers});assert.equal(pdf.status,200);assert.equal(Buffer.from(await pdf.arrayBuffer()).subarray(0,5).toString(),'%PDF-');
  const history=await (await fetch(base+'/api/network-history',{headers})).json();assert.equal(history.history[0].ip,undefined);assert.equal(history.history[0].network_label,'NET-AAAAAAAA');
  const modAccess=await (await fetch(base+'/api/moderator/access',{headers})).json();assert.equal(modAccess.moderators[0].kick_username,'qa_mod');
- const modInvite=await (await post('/api/moderator/invite',{userId:910000003,username:'qa_mod'})).json();assert.match(modInvite.invite_url,/\/mod\?invite=QA_TEST_INVITE$/);
+ const modInvite=await (await post('/api/moderator/invite',{userId:910000003,username:'qa_mod'})).json();assert.match(modInvite.invite_url,/\/mod#invite=QA_TEST_INVITE$/);
  console.log('PASS: isolated startup, 5 HTML endpoints + inline script syntax, /health, auth/CSRF guards, trust/panic/timeout recovery, sealed report + verification + PDF, network-history redaction, selected-moderator access/invite.');
  console.log('No actual KICK/cloud requests: server fetch preloaded with deterministic fixtures and reject-all fallback.');
 } finally {child.kill('SIGTERM');await once(child,'exit');console.log(logs.trim());}
