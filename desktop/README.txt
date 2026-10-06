@@ -15,7 +15,7 @@ NORMAL USE
 Double-click the "StreamShield Protection" shortcut created on your Desktop.
 
 PRIVACY
-Your Kick OAuth tokens are encrypted locally on your PC. The StreamShield cloud OAuth broker processes authorization codes and refresh tokens only long enough to exchange/refresh them and does not persist them. Public Kick chat text buffered by the cloud webhook expires after 15 minutes; event rows expire after 24 hours. Optional Network Protection receives a viewer public IP only when that viewer uses the StreamShield verification gateway. The exact verified IP is stored encrypted at rest and a separate keyed one-way network signature is used for matching. Targeted Channel Verification also uses a random first-party browser token for up to 90 days and stores only a keyed one-way hash of that token. It is not a hardware ID and StreamShield does not use invasive browser fingerprinting.
+Your Kick OAuth tokens are encrypted locally on your PC. The StreamShield cloud OAuth broker processes authorization codes and refresh tokens only long enough to exchange/refresh them and does not persist them. Public Kick chat text buffered by the cloud webhook expires after 15 minutes; event rows expire after 24 hours. Optional Network Protection processes the viewer's public IP only when that viewer uses the StreamShield verification gateway. StreamShield immediately converts it to a keyed one-way network signature for exact matching, then discards the full IP. Full IP addresses are not stored or shown to streamers/moderators. Targeted Channel Verification also uses a random first-party browser token for up to 90 days and stores only a keyed one-way hash of that token. It is not a hardware ID and StreamShield does not use invasive browser fingerprinting.
 
 SAFETY
 StreamShield is defensive-only. It does not generate viewers, followers, chat, subscriptions, raids, or artificial engagement. Automatic timeouts are off by default.
@@ -29,7 +29,7 @@ StreamShield checks the official StreamShield release feed hourly while running.
 NETWORK PROTECTION (OPTIONAL)
 - Disabled by default.
 - Uses a StreamShield-controlled KICK verification link; KICK itself does not expose viewer IP addresses.
-- Exact verified viewer IPs are stored encrypted at rest in the private StreamShield backend. A keyed one-way network signature is used for automatic matching.
+- Full viewer IP addresses are not stored. A keyed one-way network signature is retained for automatic exact-network matching.
 - A permanent KICK ban can mark previously verified network signatures as blocked.
 - Exact-network auto-ban is a separate opt-in because shared/dynamic IPs can cause false positives.
 - StreamShield does not fingerprint devices or ban subnets.
@@ -42,16 +42,16 @@ Easy Ban-Evasion Protection:
 2. Click Enable Full Protection.
 3. Click Copy Viewer Verification Link and place that link where viewers/moderators can use it.
 
-The dashboard keeps exact verified IPs under the collapsed "IP & Ban History" subsection. Exact IPs are stored encrypted at rest and are only collected when a viewer voluntarily uses the StreamShield verification link. StreamShield does not receive viewer IPs from KICK.
+The dashboard keeps masked verified-network records under the collapsed "Network & Ban History" subsection. The full IP is never displayed and is not persisted; only a keyed one-way network identifier is retained. StreamShield does not receive viewer IPs from KICK.
 
 
 NEW IN 0.6.0-beta.3
 -------------------
 Easy undo for network mistakes:
-- Open IP & Ban History.
+- Open Network & Ban History.
 - A blocked IP has an UN-IP BAN button.
 - Confirm once to remove the network block and cancel any pending auto-ban action for that IP.
-- The IP remains in history as UNBLOCKED for audit purposes.
+- The masked network record remains in history as UNBLOCKED for audit purposes.
 - Existing KICK account bans are NOT automatically removed.
 
 
@@ -59,9 +59,9 @@ NEW IN 0.6.0-beta.4
 -------------------
 Always-visible Quick Start help:
 - A StreamShield Quick Start pop-out opens every time the platform loads.
-- It explains Connect KICK, Enable Full Protection, the Viewer Verification Link, Permanent Ban, future exact-IP matching, IP & Ban History, and UN-IP BAN.
+- It explains Connect KICK, Enable Full Protection, the Viewer Verification Link, Permanent Ban, future exact-network matching, Network & Ban History, and UN-IP BAN.
 - A permanent Help button reopens the instructions at any time.
-- The guide explains that StreamShield only knows an IP after voluntary verification and that shared/mobile/VPN/reassigned IPs can cause false matches.
+- The guide explains that the connecting address is processed only during voluntary verification to create a one-way network ID, and that shared/mobile/VPN/reassigned networks can cause false matches.
 
 
 NEW IN 0.6.0-beta.5
@@ -150,3 +150,12 @@ Moderator workflow clarity:
 - The public Moderator Guide explains what human KICK moderators can and cannot access in this beta.
 - Beta 11 is explicit that separate remote StreamShield moderator logins are not implemented yet. The current dashboard and Compact Control are local to the StreamShield installation.
 - Streamers should never share KICK passwords, OAuth tokens, stream keys, or Windows credentials with moderators.
+
+
+PRIVACY HARDENING - BETA 11
+---------------------------
+- Full viewer IP addresses are not persisted.
+- The verification edge receives the connection address transiently, converts it to a keyed HMAC network identifier, and discards the full address.
+- StreamShield dashboards, Compact Control, case files, reports, and moderator views display only masked network IDs such as NET-12AB34CD.
+- Previous encrypted IP ciphertext was erased from the StreamShield network tables and those storage columns were removed.
+- Exact-network matching and UN-IP BAN continue to use the non-reversible keyed network hash.
