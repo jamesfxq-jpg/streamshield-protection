@@ -1,0 +1,89 @@
+name: StreamShield Beta Bug Report
+description: Report a reproducible Beta 10 problem. Do not include credentials, tokens, stream keys, private messages, or exact viewer IP addresses.
+title: "[Beta 10] "
+labels: ["beta-feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing StreamShield. Use consenting accounts for controlled moderation and verification tests.
+        **Never post passwords, OAuth tokens, stream keys, private messages, or exact viewer IP addresses.**
+  - type: input
+    id: version
+    attributes:
+      label: StreamShield version
+      placeholder: 0.6.0-beta.10
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Install / first launch
+        - KICK connection
+        - Pre-Stream Protection Check
+        - Compact Control
+        - Chat / event monitoring
+        - Viewer verification
+        - Network protection
+        - Moderation
+        - Recovery / undo
+        - Stream reports / evidence
+        - OBS branding / overlay
+        - Update / reinstall
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Low
+        - Medium
+        - High
+        - Critical
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Give the shortest clear description of the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open StreamShield
+        2. Connect KICK
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected result
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual result
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety acknowledgement
+      options:
+        - label: I did not include passwords, OAuth tokens, stream keys, private messages, or exact viewer IP addresses.
+          required: true
+        - label: Any controlled moderation or verification test used accounts whose owners agreed to participate.
+          required: true
