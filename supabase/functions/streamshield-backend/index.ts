@@ -474,7 +474,7 @@ async function handleOauthCallback(req:Request) {
       if(observed?.blocked_network) {
         return html(403,"StreamShield access denied","This channel's security policy denied this verification. Return to the streamer for assistance if you believe this is an error.");
       }
-      return html(200,"StreamShield verification complete","Your KICK account and connection were verified for this protected channel. The exact verified IP is stored encrypted at rest for the channel's defensive IP & Ban History. You may close this window and return to the stream.");
+      return html(200,"StreamShield verification complete","Your KICK account and connection were verified for this protected channel. StreamShield does not store or display your full IP address; it keeps only a keyed one-way network identifier for exact-match moderation. You may close this window and return to the stream.");
     }
 
     if(st?.v!==1 || !validLocalCallback(String(st?.local_callback??""))) throw new Error("invalid state");
@@ -643,7 +643,8 @@ async function handleNetworkHistory(req:Request) {
   if(!Number.isFinite(broadcasterId)||broadcasterId<=0) return json(400,{error:"invalid_broadcaster_id"});
   if(!(await authorizeInstall(req,broadcasterId))) return json(401,{error:"unauthorized_installation"});
   const history=await rpc<any>("streamshield_network_history",{p_broadcaster_id:broadcasterId,p_limit:100});
-  return json(200,{ok:true,history});
+  const safeHistory=(Array.isArray(history)?history:[]).map((row:any)=>{ const {ip,ip_address,display_ip,...rest}=row??{}; return rest; });
+  return json(200,{ok:true,history:safeHistory});
 }
 async function handleNetworkUnblock(req:Request) {
   const body:any=await readJson(req);
@@ -693,7 +694,7 @@ Deno.serve(async (req:Request)=>{
         // getAppStatus is itself a database read, so it is sufficient to verify DB
         // connectivity. Avoid a second sequential REST query on this latency-sensitive route.
         const status=await getAppStatus();
-        return json(200,{ok:true,service:"streamshield-backend",database:true,kick_primary:true,app_configured:Boolean(status?.bootstrap_used),public_version:status?.public_version??null,stores_kick_oauth_tokens:false,chat_buffer_minutes:15,event_retention_hours:24,network_protection:true,targeted_verification:true,first_party_device_tokens:true,invasive_device_fingerprinting:false,stores_raw_viewer_ips:false,stores_encrypted_verified_ips:true});
+        return json(200,{ok:true,service:"streamshield-backend",database:true,kick_primary:true,app_configured:Boolean(status?.bootstrap_used),public_version:status?.public_version??null,stores_kick_oauth_tokens:false,chat_buffer_minutes:15,event_retention_hours:24,network_protection:true,targeted_verification:true,first_party_device_tokens:true,invasive_device_fingerprinting:false,stores_raw_viewer_ips:false,stores_encrypted_verified_ips:false,stores_hashed_network_identifiers:true});
       } catch(e) {
         return json(503,{ok:false,service:"streamshield-backend",database:false,error:e instanceof Error?e.message:String(e)});
       }
