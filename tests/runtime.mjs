@@ -35,7 +35,7 @@ try{
  const r=await post('/api/stream-report',{force:true});assert.equal(r.status,200);const report=await r.json();assert.equal(report.report.sealValid,true);
  const seal=await (await post('/api/report-verify',{id:report.report.id})).json();assert.equal(seal.valid,true);
  const pdf=await fetch(base+report.report.pdfUrl,{headers});assert.equal(pdf.status,200);assert.equal(Buffer.from(await pdf.arrayBuffer()).subarray(0,5).toString(),'%PDF-');
- const history=await (await fetch(base+'/api/network-history',{headers})).json();assert.equal(history.history[0].ip,'192.0.2.20');
- console.log('PASS: isolated startup, 5 HTML endpoints + inline script syntax, /health, auth/CSRF guards, trust/panic/timeout recovery, sealed report + verification + PDF, network-history passthrough.');
+ const history=await (await fetch(base+'/api/network-history',{headers})).json();assert.equal(history.history[0].ip,undefined);assert.equal(history.history[0].network_label,'NET-AAAAAAAA');
+ console.log('PASS: isolated startup, 5 HTML endpoints + inline script syntax, /health, auth/CSRF guards, trust/panic/timeout recovery, sealed report + verification + PDF, network-history redaction.');
  console.log('No actual KICK/cloud requests: server fetch preloaded with deterministic fixtures and reject-all fallback.');
 } finally {child.kill('SIGTERM');await once(child,'exit');console.log(logs.trim());}
