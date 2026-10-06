@@ -36,6 +36,14 @@ function json(status: number, value: unknown, extra: Record<string,string> = {})
   });
 }
 
+const MOD_CORS = {
+  "access-control-allow-origin": PUBLIC_WEB_ORIGIN,
+  "access-control-allow-methods": "GET, POST, OPTIONS",
+  "access-control-allow-headers": "content-type, x-streamshield-mod-session",
+};
+function modJson(status:number,value:unknown,extra:Record<string,string>={}) {
+  return json(status,value,{...MOD_CORS,...extra});
+}
 function html(status:number, title:string, body:string) {
   return verificationResult(status,title,body);
 }
@@ -400,6 +408,203 @@ async function handleVerificationComplete(req:Request) {
   return json(200,{ok:true,completed:Boolean(completed)});
 }
 
+
+const MOD_PERMISSIONS = {
+  delete_message:true,
+  verify:true,
+  timeout:true,
+  ban:true,
+  unban:true,
+  case_file:true,
+  network_view:true
+};
+
+function safeModAction(value:string) {
+  return ["delete_message","verification_request","timeout_10","permanent_ban","unban","case_file"].includes(value);
+}
+function modPermissionForAction(action:string) {
+  return ({
+    delete_message:"delete_message",
+    verification_request:"verify",
+    timeout_10:"timeout",
+    permanent_ban:"ban",
+    unban:"unban",
+    case_file:"case_file"
+  } as Record<string,string>)[action] || "";
+}
+async function getModeratorInvite(rawToken:string) {
+  if(!/^[A-Za-z0-9_-]{32,128}$/.test(rawToken)) return null;
+  const tokenHash=await sha256Hex(rawToken);
+  const now=encodeURIComponent(new Date().toISOString());
+  const rr=await rest(`streamshield_moderator_invites?invite_token_hash=eq.${tokenHash}&revoked_at=is.null&expires_at=gt.${now}&select=id,broadcaster_id,kick_user_id,kick_username,permissions,created_at,expires_at,redeemed_at&limit=1`,{headers:{accept:"application/json"}});
+  return (await rr.json())?.[0]??null;
+}
+async function moderatorSession(req:Request) {
+  const raw=(req.headers.get("x-streamshield-mod-session")??"").trim();
+  if(!/^[A-Za-z0-9_-]{32,128}$/.test(raw)) return null;
+  const hash=await sha256Hex(raw);
+  const now=encodeURIComponent(new Date().toISOString());
+  const sr=await rest(`streamshield_moderator_sessions?session_token_hash=eq.${hash}&revoked_at=is.null&expires_at=gt.${now}&select=id,broadcaster_id,kick_user_id,kick_username,expires_at&limit=1`,{headers:{accept:"application/json"}});
+  const session=(await sr.json())?.[0];
+  if(!session) return null;
+  const mr=await rest(`streamshield_moderators?broadcaster_id=eq.${Number(session.broadcaster_id)}&kick_user_id=eq.${Number(session.kick_user_id)}&active=eq.true&select=broadcaster_id,kick_user_id,kick_username,permissions,active&limit=1`,{headers:{accept:"application/json"}});
+  const moderator=(await mr.json())?.[0];
+  if(!moderator) return null;
+  return {...session,permissions:moderator.permissions||{}};
+}
+async function handleModeratorInstallInvite(req:Request) {
+  const body:any=await readJson(req);
+  const broadcasterId=Number(body?.broadcaster_id), userId=Number(body?.kick_user_id);
+  const username=String(body?.kick_username??"").slice(0,100);
+  if(!Number.isFinite(broadcasterId)||broadcasterId<=0||!Number.isFinite(userId)||userId<=0) return json(400,{error:"valid_broadcaster_and_user_required"});
+  if(userId===broadcasterId) return json(400,{error:"broadcaster_cannot_be_moderator"});
+  if(!(await authorizeInstall(req,broadcasterId))) return json(401,{error:"unauthorized_installation"});
+  const raw=bytesToBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+  const hash=await sha256Hex(raw);
+  const expiresAt=new Date(Date.now()+48*60*60_000).toISOString();
+  await rest(`streamshield_moderator_invites?broadcaster_id=eq.${broadcasterId}&kick_user_id=eq.${userId}&redeemed_at=is.null&revoked_at=is.null`,{method:"PATCH",body:JSON.stringify({revoked_at:new Date().toISOString()})});
+  const rr=await rest("streamshield_moderator_invites",{method:"POST",headers:{prefer:"return=representation"},body:JSON.stringify({
+    broadcaster_id:broadcasterId,kick_user_id:userId,kick_username:username,invite_token_hash:hash,
+    permissions:MOD_PERMISSIONS,expires_at:expiresAt
+  })});
+  const created=(await rr.json())?.[0];
+  return json(200,{ok:true,invite:{id:created?.id,kick_user_id:userId,kick_username:username,expires_at:expiresAt},invite_url:`${PUBLIC_WEB_ORIGIN}/mod?invite=${encodeURIComponent(raw)}`});
+}
+async function handleModeratorInstallAccess(req:Request) {
+  const url=new URL(req.url), broadcasterId=Number(url.searchParams.get("broadcaster_id"));
+  if(!Number.isFinite(broadcasterId)||broadcasterId<=0) return json(400,{error:"invalid_broadcaster_id"});
+  if(!(await authorizeInstall(req,broadcasterId))) return json(401,{error:"unauthorized_installation"});
+  const [modsR,invitesR]=await Promise.all([
+    rest(`streamshield_moderators?broadcaster_id=eq.${broadcasterId}&active=eq.true&select=kick_user_id,kick_username,permissions,approved_at,last_login_at&order=approved_at.desc`,{headers:{accept:"application/json"}}),
+    rest(`streamshield_moderator_invites?broadcaster_id=eq.${broadcasterId}&revoked_at=is.null&redeemed_at=is.null&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=id,kick_user_id,kick_username,created_at,expires_at&order=created_at.desc`,{headers:{accept:"application/json"}})
+  ]);
+  return json(200,{ok:true,moderators:await modsR.json(),pending_invites:await invitesR.json()});
+}
+async function handleModeratorInstallRevoke(req:Request) {
+  const body:any=await readJson(req), broadcasterId=Number(body?.broadcaster_id), userId=Number(body?.kick_user_id);
+  if(!Number.isFinite(broadcasterId)||broadcasterId<=0||!Number.isFinite(userId)||userId<=0) return json(400,{error:"valid_broadcaster_and_user_required"});
+  if(!(await authorizeInstall(req,broadcasterId))) return json(401,{error:"unauthorized_installation"});
+  const now=new Date().toISOString();
+  await Promise.all([
+    rest(`streamshield_moderators?broadcaster_id=eq.${broadcasterId}&kick_user_id=eq.${userId}`,{method:"PATCH",body:JSON.stringify({active:false,revoked_at:now})}),
+    rest(`streamshield_moderator_sessions?broadcaster_id=eq.${broadcasterId}&kick_user_id=eq.${userId}&revoked_at=is.null`,{method:"PATCH",body:JSON.stringify({revoked_at:now})}),
+    rest(`streamshield_moderator_invites?broadcaster_id=eq.${broadcasterId}&kick_user_id=eq.${userId}&revoked_at=is.null&redeemed_at=is.null`,{method:"PATCH",body:JSON.stringify({revoked_at:now})})
+  ]);
+  return json(200,{ok:true,revoked:true});
+}
+async function handleModeratorInstallCommands(req:Request) {
+  const url=new URL(req.url), broadcasterId=Number(url.searchParams.get("broadcaster_id"));
+  if(!Number.isFinite(broadcasterId)||broadcasterId<=0) return json(400,{error:"invalid_broadcaster_id"});
+  if(!(await authorizeInstall(req,broadcasterId))) return json(401,{error:"unauthorized_installation"});
+  const items=await rpc<any>("streamshield_moderator_claim_commands",{p_broadcaster_id:broadcasterId,p_limit:20});
+  return json(200,{ok:true,items:Array.isArray(items)?items:[]});
+}
+async function handleModeratorInstallCommandComplete(req:Request) {
+  const body:any=await readJson(req), broadcasterId=Number(body?.broadcaster_id), id=String(body?.id??"");
+  if(!Number.isFinite(broadcasterId)||broadcasterId<=0||!/^[0-9a-f-]{36}$/i.test(id)) return json(400,{error:"invalid_command"});
+  if(!(await authorizeInstall(req,broadcasterId))) return json(401,{error:"unauthorized_installation"});
+  const completed=await rpc<boolean>("streamshield_moderator_complete_command",{
+    p_broadcaster_id:broadcasterId,p_id:id,p_ok:Boolean(body?.ok),
+    p_outcome:String(body?.outcome??"").slice(0,200),p_result:body?.result??{}
+  });
+  return json(200,{ok:true,completed:Boolean(completed)});
+}
+async function handleModeratorInviteInfo(req:Request) {
+  const raw=String(new URL(req.url).searchParams.get("invite")??"");
+  const invite=await getModeratorInvite(raw);
+  if(!invite) return modJson(410,{error:"invite_expired_or_invalid"});
+  const cr=await rest(`streamshield_channels?broadcaster_id=eq.${Number(invite.broadcaster_id)}&select=broadcaster_id,username,slug&limit=1`,{headers:{accept:"application/json"}});
+  const channel=(await cr.json())?.[0]??null;
+  return modJson(200,{ok:true,invite:{kick_user_id:invite.kick_user_id,kick_username:invite.kick_username,expires_at:invite.expires_at},channel});
+}
+async function handleModeratorStart(req:Request) {
+  const raw=String(new URL(req.url).searchParams.get("invite")??"");
+  const invite=await getModeratorInvite(raw);
+  if(!invite) return verificationResult(410,"Moderator Invite","This StreamShield moderator invite is invalid or expired.");
+  const creds=await getAppCreds();
+  const verifier=bytesToBase64Url(crypto.getRandomValues(new Uint8Array(48)));
+  const challenge=bytesToBase64Url(await sha256Bytes(verifier));
+  const state=await seal({
+    v:4,flow:"moderator_invite",exp:Date.now()+10*60_000,verifier,
+    invite_hash:await sha256Hex(raw),broadcaster_id:Number(invite.broadcaster_id),expected_user_id:Number(invite.kick_user_id)
+  },creds.clientSecret);
+  const auth=new URL("https://id.kick.com/oauth/authorize");
+  auth.searchParams.set("response_type","code");
+  auth.searchParams.set("client_id",creds.clientId);
+  auth.searchParams.set("redirect_uri",OAUTH_CALLBACK);
+  auth.searchParams.set("scope",NETWORK_VIEWER_SCOPES.join(" "));
+  auth.searchParams.set("state",state);
+  auth.searchParams.set("code_challenge",challenge);
+  auth.searchParams.set("code_challenge_method","S256");
+  return new Response(null,{status:302,headers:{location:auth.toString(),"cache-control":"no-store","referrer-policy":"no-referrer"}});
+}
+async function handleModeratorSnapshot(req:Request) {
+  const mod=await moderatorSession(req);
+  if(!mod) return modJson(401,{error:"moderator_session_invalid"});
+  const broadcasterId=Number(mod.broadcaster_id), userId=Number(mod.kick_user_id);
+  const after=encodeURIComponent(new Date(Date.now()-15*60_000).toISOString());
+  const [channelR,chatR,verification,history,commandsR]=await Promise.all([
+    rest(`streamshield_channels?broadcaster_id=eq.${broadcasterId}&select=broadcaster_id,username,slug,last_webhook_at,last_event_type&limit=1`,{headers:{accept:"application/json"}}),
+    rest(`streamshield_webhook_events?broadcaster_id=eq.${broadcasterId}&event_type=eq.chat.message.sent&event_timestamp=gt.${after}&select=kick_chat_message_id,sender_id,sender_username,chat_content,event_timestamp&order=event_timestamp.desc&limit=50`,{headers:{accept:"application/json"}}),
+    rpc<any>("streamshield_verification_recent",{p_broadcaster_id:broadcasterId,p_limit:30}),
+    rpc<any>("streamshield_network_history",{p_broadcaster_id:broadcasterId,p_limit:30}),
+    rest(`streamshield_moderator_commands?broadcaster_id=eq.${broadcasterId}&moderator_user_id=eq.${userId}&select=id,action,status,outcome,result,created_at,completed_at&order=created_at.desc&limit=20`,{headers:{accept:"application/json"}})
+  ]);
+  const safeNetworks=(Array.isArray(history)?history:[]).map((row:any)=>({
+    network_label:String(row?.network_label??"Verified network"),
+    blocked:Boolean(row?.blocked),source_username:row?.source_username??null,
+    last_match_at:row?.last_match_at??null,match_count:Number(row?.match_count||0)
+  }));
+  return modJson(200,{ok:true,moderator:{kick_user_id:userId,kick_username:mod.kick_username,permissions:mod.permissions},
+    channel:(await channelR.json())?.[0]??null,recent_chat:await chatR.json(),
+    verification:Array.isArray(verification)?verification:[],networks:safeNetworks,commands:await commandsR.json()});
+}
+async function handleModeratorCommand(req:Request) {
+  const mod=await moderatorSession(req);
+  if(!mod) return modJson(401,{error:"moderator_session_invalid"});
+  const body:any=await readJson(req), action=String(body?.action??"");
+  if(!safeModAction(action)) return modJson(400,{error:"unsupported_action"});
+  const permission=modPermissionForAction(action);
+  if(!permission || mod.permissions?.[permission]!==true) return modJson(403,{error:"permission_denied"});
+  const payload:any={};
+  const userId=Number(body?.userId);
+  if(action!=="delete_message") {
+    if(!Number.isFinite(userId)||userId<=0) return modJson(400,{error:"valid_user_required"});
+    payload.userId=Math.trunc(userId);
+    payload.username=String(body?.username??"").slice(0,100);
+  }
+  if(action==="delete_message") {
+    const messageId=String(body?.messageId??"").slice(0,200);
+    if(!messageId) return modJson(400,{error:"message_id_required"});
+    payload.messageId=messageId;
+    if(Number.isFinite(userId)&&userId>0) payload.userId=Math.trunc(userId);
+    payload.username=String(body?.username??"").slice(0,100);
+  }
+  const rr=await rest("streamshield_moderator_commands",{method:"POST",headers:{prefer:"return=representation"},body:JSON.stringify({
+    broadcaster_id:Number(mod.broadcaster_id),moderator_user_id:Number(mod.kick_user_id),
+    moderator_username:String(mod.kick_username??"").slice(0,100),action,payload,status:"queued"
+  })});
+  const row=(await rr.json())?.[0];
+  return modJson(200,{ok:true,command:{id:row?.id,status:row?.status??"queued",action}});
+}
+async function handleModeratorCommandStatus(req:Request) {
+  const mod=await moderatorSession(req);
+  if(!mod) return modJson(401,{error:"moderator_session_invalid"});
+  const id=String(new URL(req.url).searchParams.get("id")??"");
+  if(!/^[0-9a-f-]{36}$/i.test(id)) return modJson(400,{error:"invalid_command_id"});
+  const rr=await rest(`streamshield_moderator_commands?id=eq.${id}&broadcaster_id=eq.${Number(mod.broadcaster_id)}&moderator_user_id=eq.${Number(mod.kick_user_id)}&select=id,action,status,outcome,result,created_at,claimed_at,completed_at&limit=1`,{headers:{accept:"application/json"}});
+  const command=(await rr.json())?.[0];
+  if(!command) return modJson(404,{error:"command_not_found"});
+  return modJson(200,{ok:true,command});
+}
+async function handleModeratorLogout(req:Request) {
+  const raw=(req.headers.get("x-streamshield-mod-session")??"").trim();
+  if(/^[A-Za-z0-9_-]{32,128}$/.test(raw)) {
+    const hash=await sha256Hex(raw);
+    await rest(`streamshield_moderator_sessions?session_token_hash=eq.${hash}&revoked_at=is.null`,{method:"PATCH",body:JSON.stringify({revoked_at:new Date().toISOString()})});
+  }
+  return modJson(200,{ok:true});
+}
 async function handleOauthCallback(req:Request) {
   const u=new URL(req.url), code=u.searchParams.get("code")??"", state=u.searchParams.get("state")??"";
   if(!code||!state) return html(400,"StreamShield connection failed","Kick did not return a complete authorization response.");
@@ -408,6 +613,31 @@ async function handleOauthCallback(req:Request) {
     const st=await unseal<any>(state,creds.clientSecret);
     if(Number(st?.exp)<Date.now()) throw new Error("expired state");
     const token=await exchangeCode(code,String(st?.verifier??""),creds);
+
+    if(st?.v===4 && st?.flow==="moderator_invite") {
+      const broadcasterId=Number(st?.broadcaster_id), expectedUserId=Number(st?.expected_user_id), inviteHash=String(st?.invite_hash??"");
+      const ir=await rest(`streamshield_moderator_invites?invite_token_hash=eq.${inviteHash}&broadcaster_id=eq.${broadcasterId}&kick_user_id=eq.${expectedUserId}&revoked_at=is.null&expires_at=gt.${encodeURIComponent(new Date().toISOString())}&select=id,broadcaster_id,kick_user_id,kick_username,permissions,redeemed_at&limit=1`,{headers:{accept:"application/json"}});
+      const invite=(await ir.json())?.[0];
+      if(!invite) return verificationResult(410,"Moderator Invite","This StreamShield moderator invite is no longer active.");
+      const users=await kickGet(token.access_token,"users");
+      const user=users?.data?.[0];
+      if(!user?.user_id) throw new Error("Kick moderator identity lookup failed");
+      if(Number(user.user_id)!==expectedUserId) return verificationResult(403,"Wrong KICK Account","This moderator invite belongs to a different KICK account.");
+      const now=new Date().toISOString();
+      await rest("streamshield_moderators?on_conflict=broadcaster_id,kick_user_id",{method:"POST",headers:{prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({
+        broadcaster_id:broadcasterId,kick_user_id:expectedUserId,kick_username:String(user.name??"").slice(0,100),
+        permissions:invite.permissions||MOD_PERMISSIONS,active:true,approved_at:now,last_login_at:now,revoked_at:null
+      })});
+      await rest(`streamshield_moderator_invites?id=eq.${invite.id}`,{method:"PATCH",body:JSON.stringify({redeemed_at:now})});
+      const sessionRaw=bytesToBase64Url(crypto.getRandomValues(new Uint8Array(36)));
+      await rest("streamshield_moderator_sessions",{method:"POST",headers:{prefer:"return=minimal"},body:JSON.stringify({
+        broadcaster_id:broadcasterId,kick_user_id:expectedUserId,kick_username:String(user.name??"").slice(0,100),
+        session_token_hash:await sha256Hex(sessionRaw),expires_at:new Date(Date.now()+12*60*60_000).toISOString()
+      })});
+      const target=new URL("/mod-panel",PUBLIC_WEB_ORIGIN);
+      target.searchParams.set("session",sessionRaw);
+      return new Response(null,{status:302,headers:{location:target.toString(),"cache-control":"no-store","referrer-policy":"no-referrer"}});
+    }
 
     if(st?.v===3 && st?.flow==="targeted_verification") {
       if(st.viewer_consent!==true) return verificationHtml(400,"Channel Verification","Please reopen the verification link and review the connection-information notice before continuing.");
@@ -703,6 +933,18 @@ Deno.serve(async (req:Request)=>{
       const r=await rest("streamshield_releases?channel=eq.beta&select=version,channel,download_url,sha256,published_at,notes&order=published_at.desc&limit=1",{headers:{accept:"application/json"}});
       return json(200,{ok:true,release:(await r.json())?.[0]??null});
     }
+    if(req.method==="OPTIONS" && path.includes("/moderator/")) return new Response(null,{status:204,headers:MOD_CORS});
+    if(req.method==="POST" && path.endsWith("/moderator/install/invite")) return handleModeratorInstallInvite(req);
+    if(req.method==="GET" && path.endsWith("/moderator/install/access")) return handleModeratorInstallAccess(req);
+    if(req.method==="POST" && path.endsWith("/moderator/install/revoke")) return handleModeratorInstallRevoke(req);
+    if(req.method==="GET" && path.endsWith("/moderator/install/commands")) return handleModeratorInstallCommands(req);
+    if(req.method==="POST" && path.endsWith("/moderator/install/commands/complete")) return handleModeratorInstallCommandComplete(req);
+    if(req.method==="GET" && path.endsWith("/moderator/invite-info")) return handleModeratorInviteInfo(req);
+    if(req.method==="GET" && path.endsWith("/moderator/start")) return handleModeratorStart(req);
+    if(req.method==="GET" && path.endsWith("/moderator/snapshot")) return handleModeratorSnapshot(req);
+    if(req.method==="POST" && path.endsWith("/moderator/command")) return handleModeratorCommand(req);
+    if(req.method==="GET" && path.endsWith("/moderator/command/status")) return handleModeratorCommandStatus(req);
+    if(req.method==="POST" && path.endsWith("/moderator/logout")) return handleModeratorLogout(req);
     if(req.method==="POST" && path.endsWith("/owner-bootstrap")) return handleOwnerBootstrap(req);
     if(req.method==="POST" && path.endsWith("/oauth/start")) return handleOauthStart(req);
     if(req.method==="GET" && path.endsWith("/oauth/kick/callback")) return handleOauthCallback(req);
