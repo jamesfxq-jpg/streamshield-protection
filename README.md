@@ -1,6 +1,6 @@
 # StreamShield Protection
 
-**0.6.0-beta.11** — a Windows desktop application for monitoring and moderating a connected KICK channel, with a public download site and a cloud OAuth/webhook service.
+**0.6.0-beta.12** — a Windows desktop application for monitoring and moderating a connected KICK channel, with a public download site and a cloud OAuth/webhook service.
 
 Public website: [streamshield-protection-public.vercel.app](https://streamshield-protection-public.vercel.app)
 
@@ -19,11 +19,11 @@ To update an existing installation, stop StreamShield, extract the new ZIP, and 
 ## Features and limits
 
 - **Follow Shield** records suspicious follow bursts for review. **Chat Raid Shield** and **Link / Scam Shield** can delete qualifying spam using the connected channel's moderation authorization.
-- **Compact Control** provides recent chat, verification requests, blocked verified networks, account moderation, offender case files, supported recovery actions, and a one-click Moderator Guide. Targeted verification now copies a ready-to-paste @username message plus the one-time link.
+- **Compact Control** provides recent chat, verification requests, blocked verified networks, account moderation, offender case files, supported recovery actions, and a one-click Moderator Guide. Targeted verification now automatically replies to the selected viewer in KICK chat with the @username message plus the one-time link; clipboard fallback is used if the post fails.
 - **Stream reports** collect local protection events and offer PDF export, a summary, and an evidence integrity seal. A matching seal checks report integrity; it does not identify an attacker or independently validate the events.
 - **Recovery Center** can reverse supported recent actions. Removing a StreamShield network block with **UN-IP BAN** and removing a KICK account ban are separate actions.
 
-The channel connection requests account/channel reading, event subscriptions, account moderation, and chat-message moderation permissions. Automatic user timeouts are a separate opt-in. Optional Network Protection and exact-network automatic bans are also separate settings; review them before enabling them. A dedicated moderator account, if configured, is optional and does not replace OAuth authorization.
+The channel connection requests account/channel reading, event subscriptions, chat sending (`chat:write`), account moderation, and chat-message moderation permissions. Automatic user timeouts are a separate opt-in. Optional Network Protection and exact-network automatic bans are also separate settings; review them before enabling them. A dedicated moderator account, if configured, is optional and does not replace OAuth authorization.
 
 Viewer verification requires an explicit consent step before KICK authorization and optional network/browser-token recording. KICK does not supply viewer IP addresses to StreamShield. During verification, the connection address is processed transiently to create a keyed one-way network identifier and then discarded; full viewer IP addresses are not stored or shown. Targeted verification may also use a random first-party browser token. Shared or reassigned IP addresses and browser-token matches are risk signals, not proof that two accounts belong to the same person. Browser tokens are not hardware identifiers and can be reset by clearing site data or changing browsers.
 
@@ -105,3 +105,10 @@ Before relying on the beta for a live channel, verify the user's Windows desktop
 ### Beta 11 privacy hardening
 
 Beta 11 no longer persists encrypted full viewer IP addresses. Verification uses the connecting address only long enough to derive a keyed HMAC network identifier for exact-match ban-evasion checks. Existing encrypted IP material was erased from the private network tables, the ciphertext columns were removed, and the reversible IP encryption key/helpers were removed. StreamShield UI and APIs expose only masked network IDs, not full viewer IP addresses.
+
+
+### Beta 12 automatic verification delivery
+
+Beta 12 adds KICK's documented `chat:write` permission. After **Require Verification** successfully creates the one-time request and applies the temporary chat restriction, StreamShield automatically posts the verification message into KICK chat and replies to the selected chatter's message when a message ID is available. The post uses the connected broadcaster's user authorization. If KICK refuses or cannot send the message, StreamShield keeps the verification request active and copies the ready-made message as a manual fallback.
+
+Existing installations should reconnect KICK once after updating to Beta 12 so the new chat permission can be approved.
