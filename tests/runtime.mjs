@@ -12,7 +12,7 @@ const packageRoot=process.env.QA_PACKAGE_ROOT||fileURLToPath(new URL('../desktop
 const data=await mkdtemp(join(tmpdir(),'streamshield-runtime-qa-'));
 const store=new RuntimeStore(data);await store.init();
 const s=store.createSession({broadcasterId:910000001,username:'QA Fixture',slug:'qa_fixture',token:{access_token:'fake_qa_token',refresh_token:'fake_qa_refresh',expires_in:3600},tokenExpiresAt:Date.now()+3600000,isLive:false});
-s.remoteBackendRegistered=true;s.remoteBackendError='QA fixture: relay is unreachable';s.subscriptionHealthy=true;s.lastSubscriptionCheckAt=Date.now();s.lastPollAt=Date.now();
+s.remoteBackendRegistered=true;s.remoteInstallKey='synthetic_install_key_for_runtime_qa_1234567890';s.remoteBackendError='QA fixture: relay is unreachable';s.subscriptionHealthy=true;s.lastSubscriptionCheckAt=Date.now();s.lastPollAt=Date.now();
 await store.persistSessions();
 const port=18897,base='http://localhost:'+port;
 const child=spawn(process.execPath,['--import',fixturePath,packageRoot+'/app/dist/src/server.js'],{cwd:packageRoot+'/app',env:{...process.env,DATA_DIR:data,PORT:String(port),PUBLIC_BASE_URL:base,STREAMSHIELD_REMOTE_BACKEND_URL:'https://qa.invalid',KICK_CLIENT_ID:'',KICK_CLIENT_SECRET:''},stdio:['ignore','pipe','pipe']});
@@ -36,6 +36,8 @@ try{
  const seal=await (await post('/api/report-verify',{id:report.report.id})).json();assert.equal(seal.valid,true);
  const pdf=await fetch(base+report.report.pdfUrl,{headers});assert.equal(pdf.status,200);assert.equal(Buffer.from(await pdf.arrayBuffer()).subarray(0,5).toString(),'%PDF-');
  const history=await (await fetch(base+'/api/network-history',{headers})).json();assert.equal(history.history[0].ip,undefined);assert.equal(history.history[0].network_label,'NET-AAAAAAAA');
- console.log('PASS: isolated startup, 5 HTML endpoints + inline script syntax, /health, auth/CSRF guards, trust/panic/timeout recovery, sealed report + verification + PDF, network-history redaction.');
+ const modAccess=await (await fetch(base+'/api/moderator/access',{headers})).json();assert.equal(modAccess.moderators[0].kick_username,'qa_mod');
+ const modInvite=await (await post('/api/moderator/invite',{userId:910000003,username:'qa_mod'})).json();assert.match(modInvite.invite_url,/\/mod\?invite=QA_TEST_INVITE$/);
+ console.log('PASS: isolated startup, 5 HTML endpoints + inline script syntax, /health, auth/CSRF guards, trust/panic/timeout recovery, sealed report + verification + PDF, network-history redaction, selected-moderator access/invite.');
  console.log('No actual KICK/cloud requests: server fetch preloaded with deterministic fixtures and reject-all fallback.');
 } finally {child.kill('SIGTERM');await once(child,'exit');console.log(logs.trim());}
