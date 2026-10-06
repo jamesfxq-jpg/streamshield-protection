@@ -1,8 +1,8 @@
-StreamShield 0.6.0 Beta 10
+StreamShield 0.6.0 Beta 11
 
 Adds automatic evidence-sealed end-of-stream reports, Pre-Stream Protection Check, Offender Case Files, and Recovery Center on top of the Beta 8 live protection controls.
 
-STREAMSHIELD PROTECTION 0.6.0 BETA 10 - KICK
+STREAMSHIELD PROTECTION 0.6.0 BETA 11 - KICK
 
 INSTALL
 0. Right-click the downloaded ZIP and choose Extract All.
@@ -139,3 +139,14 @@ LIVE BETA VALIDATION
 Automated tests use isolated fixtures; they are not proof of a live KICK channel test. On a consenting test channel, verify KICK connection, live signed events, one controlled verification request, clean chat restoration, permanent-ban preservation, manual release, and the end-of-stream report.
 
 KICK's unban API cannot conditionally remove only a particular earlier timeout. A separate moderator action performed directly on KICK can race an already-started automatic unlock before its webhook arrives. StreamShield preserves observed permanent bans and records review-required conflicts; channel moderators should verify KICK's current state after a concurrent action.
+
+
+NEW IN 0.6.0-beta.11
+--------------------
+Moderator workflow clarity:
+- The full dashboard now includes a Moderator Guide button.
+- Compact Control now includes a Mod Guide button for an easy live-stream reference.
+- Require Verification now copies a ready-to-paste message containing the selected @username, short instructions, and the one-time verification link instead of copying only the raw URL.
+- The public Moderator Guide explains what human KICK moderators can and cannot access in this beta.
+- Beta 11 is explicit that separate remote StreamShield moderator logins are not implemented yet. The current dashboard and Compact Control are local to the StreamShield installation.
+- Streamers should never share KICK passwords, OAuth tokens, stream keys, or Windows credentials with moderators.
