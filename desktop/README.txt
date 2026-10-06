@@ -85,7 +85,7 @@ Bot Attack Protection + Stream Reports:
 - The dashboard now has a one-click Generate Stream Report button after a stream.
 - Stream Reports include suspicious follow spikes, chat-raid deletions/timeouts, targeted verification activity, permanent bans, exact-network evasion bans, peak threat score, and incident count.
 - Copy Summary for KICK Support produces a paste-ready defensive summary; the matching PDF is available from the same card.
-- The existing targeted verification, first-party device-token review, exact verified-IP matching, automatic exact-network ban option, and UN-IP BAN controls remain intact.
+- The existing targeted verification, first-party device-token review, exact verified-network matching, automatic exact-network ban option, and UN-IP BAN controls remain intact.
 - StreamShield still cannot prevent a third party from sending fake follows to KICK's servers; Follow Shield detects, documents, and isolates the event in StreamShield's evidence workflow instead.
 
 
@@ -93,7 +93,7 @@ NEW IN 0.6.0-beta.7
 -------------------
 Compact Live Control:
 - The main dashboard now has a Compact Control button that opens a resizable pop-out window for stream-time moderation.
-- Compact Control shows threat level, live state, Follow Shield, Chat Raid Shield, recent chat, verification queue, blocked verified IPs, and recent protection events.
+- Compact Control shows threat level, live state, Follow Shield, Chat Raid Shield, recent chat, verification queue, blocked verified networks, and recent protection events.
 - Per-chatter quick actions include Require Verification, 10-minute timeout, Permanent Ban, and manual KICK Unban.
 - Pending targeted-verification restrictions can be released from the compact window.
 - Blocked verified networks expose the existing UN-IP BAN action without opening the full dashboard.
@@ -121,7 +121,7 @@ Public site: https://streamshield-protection-public.vercel.app
 
 Reliability fixes:
 - The main dashboard initializes all controls and renders recent moderation actions.
-- Compact Control uses the actual verified-IP history and verification request IDs.
+- Compact Control uses the actual verified-network history and verification request IDs.
 - UN-IP BAN shows only currently blocked networks, while preserving audit history.
 - The Windows installer copies the OBS branding assets into the installed app. The dashboards also link to the public branding downloads.
 - Health waits for a signed KICK event before claiming Protected; current relay errors remain visible and fail the pre-stream check.
