@@ -49,8 +49,10 @@ KICK's unban endpoint cannot remove only a specific earlier timeout. A separate 
 | `supabase/functions/` | Cloud backend TypeScript/Deno configuration and legacy site/download redirects. |
 | `supabase/migrations/`, `supabase/operations/` | Incremental permanent-ban cancellation SQL and guarded release-publication SQL. |
 | `tools/package_release.py` | Deterministic ZIP packaging and public metadata/checksum generation. |
-| `docs/beta10-release-verification.md` | Recorded release, deployment, and verification evidence. |
-| `tests/` | Isolated regression scripts and supporting fixtures. |
+| `docs/beta10-release-verification.md` | Original release, deployment, and verification evidence. |
+| `docs/beta10-windows-validation.md` | Successful Windows installation follow-up and remaining live-channel acceptance. |
+| `tests/` | Isolated regression scripts, Windows smoke/diagnostic scripts, and supporting fixtures. |
+| `.github/workflows/windows-beta-smoke.yml` | Repeatable published-release installation check on Windows. |
 | `releases/`, `release.json` | Windows release ZIP/checksum and public release metadata. |
 | `release/beta9/`, `release_parts/beta9/` | Retained historical beta 9 release fragments. |
 
@@ -58,7 +60,7 @@ The desktop snapshot contains runnable JavaScript, but not the original desktop 
 
 ## Local development and regression checks
 
-Use **Node.js 24** for the regression commands below. The copied regression scripts were executed with Node.js 24.19.0. The backend consent test uses Node's TypeScript-stripping API. The desktop runtime itself declares Node.js 20 or newer, and the Windows installer pins Node.js 22.23.3.
+The regression commands below passed on Linux with **Node.js 22.23.3 and 24.21.0**. The original release check also used 24.19.0. The backend consent test uses Node's TypeScript-stripping API. The desktop runtime itself declares Node.js 20 or newer, and the Windows installer pins Node.js 22.23.3; this does not establish test compatibility with every older Node release.
 
 To start the desktop HTTP application from source:
 
@@ -89,6 +91,12 @@ node tests/backend-consent.test.mjs
 
 Supporting files in `tests/fixtures/` include the historical beta 9 UI for before/after assertions and an upstream-response preload. The runtime script uses an OS temporary directory for application state and local port `18897`; that port must be available.
 
-All five scripts passed using Node.js 24.19.0; the moderation suite passed all 15 cases. These scripts use isolated state and mocked KICK/cloud responses. UI fixtures use a simulated document environment; runtime checks exercise a local Node server. A separate real Chrome test verified the deployed consent form’s inactive-request result navigation. These checks do not establish that a complete viewer OAuth round trip or a live KICK channel workflow succeeds, and the Windows installer has not been executed in Windows. See [the release verification record](docs/beta10-release-verification.md) for production download, routing, and authorization checks.
+All five scripts passed on both runtime versions in the follow-up; the moderation suite passed all 15 cases. These scripts use isolated state and mocked KICK/cloud responses. UI fixtures use a simulated document environment; runtime checks exercise a local Node server. A separate original Chrome test verified the deployed consent form's inactive-request result navigation. These checks do not establish that a complete viewer OAuth round trip or a live KICK channel workflow succeeds. See [the original release record](docs/beta10-release-verification.md) and [the latest Windows validation follow-up](docs/beta10-windows-validation.md).
 
-Before relying on the beta for a live channel, validate installation on Windows and, on an authorized test channel, check connection, signed events, a controlled verification request, clean chat restoration, permanent-ban preservation, manual recovery, and the end-of-stream report. Keep the runtime data and installation-specific encryption key private and out of release archives.
+### Published Windows installer check
+
+The unchanged Beta 10 ZIP passed fresh installation and reinstallation on a GitHub-hosted **Windows Server 2025** runner using its own pinned Node.js runtime. Checks included local startup/HTML, unauthenticated history rejection, desktop-launcher creation, intact OBS assets, and preservation of a synthetic data file. No KICK account was connected, and application cloud access was disabled. This is not a Windows 10/11 interactive desktop test or a real-account migration test.
+
+The **Windows published beta smoke test** GitHub Actions workflow runs on relevant main-branch release/test changes and can be manually dispatched. It downloads the published ZIP and checks its manifest hash before running the unchanged installer in a disposable profile. The workflow does not publish, deploy, or moderate a channel. Startup failures remain failures; the separate diagnostics step only collects bounded test logs.
+
+Before relying on the beta for a live channel, verify the user's Windows desktop experience and, on an explicitly authorized test channel, check connection, signed events, a controlled verification request, clean chat restoration, permanent-ban preservation, manual recovery, and the end-of-stream report. Keep the runtime data and installation-specific encryption key private and out of release archives.
