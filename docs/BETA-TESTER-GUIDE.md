@@ -30,6 +30,19 @@ The beta is for finding real-world reliability, usability and moderation problem
 9. Load one included PNG into OBS as an Image source.
 10. Close StreamShield, reinstall the newest beta over the existing installation, reopen it and report any unexpected reset or lost setting.
 
+## How the streamer or moderator selects a viewer for verification
+
+1. Open **Recent KICK Chat** in the full StreamShield dashboard or **Compact Control**.
+2. Find the specific chatter and click **Require Verification** beside that KICK account.
+3. StreamShield creates a targeted verification request and places a temporary StreamShield-owned chat restriction on that account while the request is pending.
+4. Copy the one-time verification link from the verification queue and send it directly to that viewer. KICK does not currently provide third-party apps a private per-viewer popup that StreamShield can force onto the viewer.
+5. The viewer opens the link, selects **Continue with KICK**, and completes KICK authorization using the account named by the request.
+6. StreamShield records the verification outcome. A clean result can automatically release the temporary restriction when StreamShield still owns that restriction and the relay/event health requirements are satisfied.
+7. A blocked-network or blocked first-party browser-token signal is a moderation signal that can remain locked for review. An exact blocked-network match can also use the optional exact-network auto-ban setting.
+8. A moderator can release a pending verification manually. A separate permanent KICK ban should not be removed by an older verification completion.
+
+Use only consenting test accounts when testing this workflow during the closed beta.
+
 ## What to report
 
 Report successful tests as well as failures. Prioritize:
