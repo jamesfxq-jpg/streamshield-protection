@@ -14,7 +14,7 @@ class Element {
 }
 const d=new StreamShieldDetector();
 const s={id:'fake-session',slug:'qa_fixture',csrfToken:'synthetic-csrf',lastAssessment:d.assess(),isLive:false,shieldActive:false,followShieldEnabled:true,chatRaidShieldEnabled:true,linkScamShieldEnabled:true,recentChat:[{userId:910000002,username:'qa_viewer',content:'synthetic test message'}],recentEvents:[],networkProtection:{enabled:true,auto_ban_exact_network_match:false,blocked_networks:1},subscriptionHealthy:true};
-const network={ok:true,history:[{ip:'192.0.2.20',network_hash:'a'.repeat(64),blocked:true,accounts:[{kick_user_id:910000002,kick_username:'qa_viewer'}]},{ip:'192.0.2.21',network_hash:'b'.repeat(64),blocked:false,blocked_at:'2026-10-01T00:00:00Z',unblocked_at:'2026-10-02T00:00:00Z'}]};
+const network={ok:true,history:[{ip:'192.0.2.20',network_hash:'a'.repeat(64),network_label:'NET-AAAAAAAA',blocked:true,accounts:[{kick_user_id:910000002,kick_username:'qa_viewer'}]},{ip:'192.0.2.21',network_hash:'b'.repeat(64),network_label:'NET-BBBBBBBB',blocked:false,blocked_at:'2026-10-01T00:00:00Z',unblocked_at:'2026-10-02T00:00:00Z'}]};
 const requests={ok:true,items:[{id:'00000000-0000-4000-8000-000000000001',kick_user_id:910000002,kick_username:'qa_viewer',status:'pending',requested_at:'2026-10-06T00:00:00.000Z'}]};
 async function render(make){
  const html=make(s,true,false);const code=html.match(/<script>([\s\S]*)<\/script>/)[1];
@@ -30,13 +30,13 @@ assert.equal(old.elements['#compactIpHistory'].innerHTML,'<p class="small">No bl
 assert.equal(descendants(old.elements['#compactQueue']).filter(n=>n.tagName==='button').length,0);
 const next=await render(after);
 const unblock=descendants(next.elements['#compactIpHistory']).find(n=>n.textContent==='UN-IP BAN');
-assert.ok(unblock);assert.match(next.elements['#compactIpHistory'].textContent,/192\.0\.2\.20/);assert.doesNotMatch(next.elements['#compactIpHistory'].textContent,/192\.0\.2\.21/);
+assert.ok(unblock);assert.match(next.elements['#compactIpHistory'].textContent,/NET-AAAAAAAA/);assert.doesNotMatch(next.elements['#compactIpHistory'].textContent,/192\.0\.2\./);assert.doesNotMatch(next.elements['#compactIpHistory'].textContent,/NET-BBBBBBBB/);
 await unblock.onclick();
 assert.deepEqual(next.calls.find(c=>c.path==='/api/network-unblock').body,{networkHash:'a'.repeat(64),reason:'compact_control_un_ip_ban'});
 const release=descendants(next.elements['#compactQueue']).find(n=>n.textContent==='Release chat / Unban');
 assert.ok(release);await release.onclick();
 assert.deepEqual(next.calls.find(c=>c.path==='/api/verification/release').body,{userId:910000002,requestId:'00000000-0000-4000-8000-000000000001'});
 console.log('PASS: Beta 9 reproduces both missing controls with authoritative backend response shapes.');
-console.log('PASS: Beta 10 renders blocked IP + UN-IP BAN and submits the exact network hash; explicit blocked=false excludes historical blocks.');
+console.log('PASS: current compact UI renders only a masked network ID + UN-IP BAN, never a full IP; explicit blocked=false excludes historical blocks.');
 console.log('PASS: Beta 10 renders pending verification release and submits the authoritative row.id.');
 console.log('All network interactions stubbed; no browser, real KICK account, or cloud mutation used.');
