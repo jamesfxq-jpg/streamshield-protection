@@ -32,7 +32,7 @@
 <article class="card"><h3>Recovery Center</h3><p>Undo the latest supported moderation action. Network blocks have their own <strong>UN-IP BAN</strong> control; removing a network block does not unban an already banned KICK account.</p></article>
 <article class="card"><h3>Private Event Board</h3><p>Review unusual follow and chat patterns, health changes, and defensive actions privately. Follow bursts are evidence signals and do not trigger bans from speed alone.</p></article>
 <article class="card"><h3>Incident and stream reports</h3><p>Review reports, download a PDF, and preserve the timing, reasons, and actions recorded by StreamShield. Reports support a review; they do not establish who caused an incident.</p></article>
-<article class="card ip-card"><h3>IP Ban / Ban-Evasion Protection</h3><p>Block a verified connection after banning a repeat offender. If another account later verifies from that exact blocked IP, StreamShield can flag it or automatically ban the new KICK account when exact-match auto-ban is enabled.</p></article>
+<article class="card ip-card"><h3>IP Ban / Ban-Evasion Protection</h3><p>Block a verified connection after banning a repeat offender. If another account later verifies from the same blocked network identity, StreamShield can flag it or automatically ban the new KICK account when exact-match auto-ban is enabled.</p></article>
 </div>
 </section>
 <section id="ip-ban" class="section card ip-ban-section" aria-labelledby="ip-ban-title">
@@ -69,8 +69,8 @@
 </div>
 <div class="ip-flow" aria-label="How StreamShield IP Ban works">
 <article class="ip-step"><span class="ip-step-number">1</span><div><h3>Viewer verifies</h3><p>The viewer selects <strong>Continue with KICK</strong>. StreamShield converts the connection into a keyed one-way network identifier for exact matching. The full IP address is discarded and is never shown to the streamer or moderators.</p></div></article>
-<article class="ip-step"><span class="ip-step-number">2</span><div><h3>You permanently ban them</h3><p>Use <strong>Permanent Ban</strong> from StreamShield. If that account has a verified connection, StreamShield can add that exact network to your blocked-IP history.</p></div></article>
-<article class="ip-step"><span class="ip-step-number">3</span><div><h3>They return on another account</h3><p>If a new KICK account later completes verification from the <strong>same exact blocked IP</strong>, StreamShield recognizes the network match.</p></div></article>
+<article class="ip-step"><span class="ip-step-number">2</span><div><h3>You permanently ban them</h3><p>Use <strong>Permanent Ban</strong> from StreamShield. If that account has a verified connection, StreamShield can add that exact network identity to your blocked-network history.</p></div></article>
+<article class="ip-step"><span class="ip-step-number">3</span><div><h3>They return on another account</h3><p>If a new KICK account later completes verification from the <strong>same exact blocked network identity</strong>, StreamShield recognizes the match.</p></div></article>
 <article class="ip-step"><span class="ip-step-number">4</span><div><h3>Flag it — or auto-ban</h3><p>StreamShield can surface the match for moderator review. With <strong>exact-network auto-ban</strong> enabled, the newly verified matching account can be banned automatically.</p></div></article>
 </div>
 <div class="ip-ban-actions">
@@ -88,7 +88,7 @@
 </ol>
 <p class="mini">Already using an earlier beta? Close it before running the Beta 11 installer, then reconnect KICK and rerun the check.</p>
 <div class="notice"><p><strong>Windows publisher notice:</strong> this beta is not yet commercially code signed. If Windows blocks installation, leave system security protections enabled and contact the person who supplied your beta access.</p></div>
-<details class="release-details"><summary>Download details and release verification</summary><p class="mini">File: <span class="code">StreamShield-Protection-0.6.0-beta.11-Windows.zip</span><br>Version: <strong>0.6.0-beta.11</strong></p><p class="mini">SHA-256: <span class="code" id="release-sha256">7c982c9c47d616a8a25c6761e95c706f0b166a1da4cbf2bc563caeabd48f8358</span></p><p><a href="/release.json">View release metadata</a></p></details>
+<details class="release-details"><summary>Download details and release verification</summary><p class="mini">File: <span class="code">StreamShield-Protection-0.6.0-beta.11-Windows.zip</span><br>Version: <strong>0.6.0-beta.11</strong></p><p class="mini">SHA-256: <span class="code" id="release-sha256">6a2952e8d13d688f9bed05ea8c467e251d6dbf6ffde3b705728040719a065b57</span></p><p><a href="/release.json">View release metadata</a></p></details>
 </section>
 <section id="use" class="section card" aria-labelledby="use-title"><div class="eyebrow">While you stream</div><h2 id="use-title">A practical routine.</h2>
 <ul class="list">
@@ -101,7 +101,7 @@
 </ul></section>
 <section class="section grid two" aria-label="Status and network protection guidance">
 <div class="card"><div class="eyebrow">Health guide</div><h2>Read each check.</h2><p><span class="status">READY</span> The checks shown in the app have passed.</p><p><span class="status warning">PENDING / DEGRADED</span> An event, live signal, connection, or required service still needs attention.</p><p><span class="status error">SUSPICIOUS ACTIVITY</span> Review the activity and reasons before taking action.</p><p class="mini">A healthy connection confirms monitoring availability. It does not guarantee that every abusive action will be detected or stopped.</p></div>
-<div class="card"><div class="eyebrow">Optional network protection</div><h2>Exact matches need context.</h2><p>Only people who use StreamShield’s verification flow can provide a verified connection record. KICK does not supply viewer IPs to StreamShield.</p><p>Public IP addresses can be shared or reassigned. With the separate exact-match auto-ban setting enabled, a newly verified account matching a blocked IP can be banned. Review possible false positives.</p><p>Targeted verification also uses a random first-party browser token. A token match is a moderator review signal by default; it is not a permanent device identity.</p></div>
+<div class="card"><div class="eyebrow">Optional network protection</div><h2>Exact matches need context.</h2><p>Only people who use StreamShield’s verification flow can provide a verified connection record. KICK does not supply viewer IPs to StreamShield.</p><p>Public IP addresses can be shared or reassigned. With the separate exact-match auto-ban setting enabled, a newly verified account matching a blocked network identity can be banned. Review possible false positives.</p><p>Targeted verification also uses a random first-party browser token. A token match is a moderator review signal by default; it is not a permanent device identity.</p></div>
 </section>
 <section id="branding" class="section" aria-labelledby="branding-title"><div class="eyebrow">For your OBS scenes</div><h2 id="branding-title">StreamShield branding, ready to download.</h2><p class="mini">These transparent PNGs are also included in the Windows download’s <strong>Streamer Branding</strong> folder. In OBS, add an <strong>Image</strong> source, select a PNG, resize without changing its proportions, and lock the source.</p>
 <div class="grid brand-grid">
