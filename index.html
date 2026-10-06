@@ -30,7 +30,7 @@
 <article class="card tint"><h3>Streamer + Moderator Controls</h3><p>The streamer gets the full dashboard and Compact Control. Selected KICK moderators can be invited to their own restricted remote Mod Dashboard with a Compact Pop-Out. <a href="/mods">See the moderator workflow.</a></p></article>
 <article class="card"><h3>Pre-Stream Check</h3><p>Check KICK authorization, event monitoring, the cloud relay, enabled shields, and evidence logging before going live. Missing live signals stay visible as pending checks.</p></article>
 <article class="card"><h3>Recovery Center</h3><p>Undo the latest supported moderation action. Network blocks have their own <strong>UN-IP BAN</strong> control; removing a network block does not unban an already banned KICK account.</p></article>
-<article class="card"><h3>Private Event Board</h3><p>Review unusual follow and chat patterns, health changes, and defensive actions privately. Follow bursts are evidence signals and do not trigger bans from speed alone.</p></article>
+<article class="card"><h3>Automatic Verification Reply</h3><p>Click <strong>Verify</strong> beside a chatter and StreamShield automatically replies to that person in KICK chat with the one-time verification link. If KICK cannot send it, the ready-made message is copied as a fallback.</p></article>
 <article class="card"><h3>Incident and stream reports</h3><p>Review reports, download a PDF, and preserve the timing, reasons, and actions recorded by StreamShield. Reports support a review; they do not establish who caused an incident.</p></article>
 <article class="card ip-card"><h3>IP Ban / Ban-Evasion Protection</h3><p>Block a verified connection after banning a repeat offender. If another account later verifies from the same blocked network identity, StreamShield can flag it or automatically ban the new KICK account when exact-match auto-ban is enabled.</p></article>
 </div>
@@ -38,7 +38,7 @@
 <section id="ip-ban" class="section card ip-ban-section" aria-labelledby="ip-ban-title">
 <div class="ip-ban-heading">
 <div><div class="eyebrow">Ban-evasion protection</div><h2 id="ip-ban-title">IP Ban repeat offenders in a few clicks.</h2>
-<p class="leadSmall">The streamer or a moderator using StreamShield can select a specific chatter for verification directly from Recent KICK Chat. StreamShield then creates a one-time verification link for that selected account. Once a verified offender is banned, that exact network can be blocked for future verified accounts.</p></div>
+<p class="leadSmall">The streamer or a selected StreamShield moderator can choose a specific chatter directly from Recent KICK Chat. StreamShield temporarily restricts that KICK account, creates a one-time verification link, and automatically replies to that viewer in KICK chat with the link. Once a verified offender is banned, that exact network identity can be blocked for future verified accounts.</p></div>
 <div class="ip-ban-badge">IP BAN</div>
 </div>
 <div class="target-verify verify-fast">
@@ -54,7 +54,7 @@
 <div class="verify-arrow" aria-hidden="true">→</div>
 <article class="verify-fast-step">
 <div class="verify-fast-icon">2</div>
-<div><span class="verify-role">STREAMSHIELD</span><h4>Copy &amp; send</h4><p>StreamShield temporarily locks that account and copies a ready-to-paste <strong>@username + verification link</strong>.</p></div>
+<div><span class="verify-role">STREAMSHIELD</span><h4>Auto-send the link</h4><p>StreamShield temporarily locks that account and automatically replies to the selected viewer in <strong>KICK chat</strong> with the @username + one-time verification link.</p></div>
 </article>
 <div class="verify-arrow" aria-hidden="true">→</div>
 <article class="verify-fast-step">
@@ -63,9 +63,9 @@
 </article>
 </div>
 <div class="verify-message-bar">
-<div><span class="verify-role">WHAT THE MOD PASTES</span><strong>@username — StreamShield verification is required. Open this link and select Continue with KICK: [link]</strong></div>
+<div><span class="verify-role">WHAT STREAMSHIELD POSTS AUTOMATICALLY</span><strong>@username — StreamShield verification is required. Open this one-time link and select Continue with KICK: [link]</strong></div>
 </div>
-<div class="verify-fast-note"><strong>That’s it.</strong> If the wrong KICK account opens the link, verification is rejected. Blocked-network matches stay available for review, and optional exact-network auto-ban can handle confirmed repeat matches.</div>
+<div class="verify-fast-note"><strong>That’s it.</strong> The verification message is a public KICK chat reply, not a private DM. If KICK cannot post it automatically, StreamShield copies the same ready-made message as a fallback. If the wrong KICK account opens the link, verification is rejected.</div>
 </div>
 <div class="ip-flow" aria-label="How StreamShield IP Ban works">
 <article class="ip-step"><span class="ip-step-number">1</span><div><h3>Viewer verifies</h3><p>The viewer selects <strong>Continue with KICK</strong>. StreamShield converts the connection into a keyed one-way network identifier for exact matching. The full IP address is discarded and is never shown to the streamer or moderators.</p></div></article>
