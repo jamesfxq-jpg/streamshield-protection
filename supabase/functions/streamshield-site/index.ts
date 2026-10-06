@@ -1,6 +1,6 @@
 const ORIGIN = "https://streamshield-protection-public.vercel.app";
-const VERSION = "0.6.0-beta.10";
-const SHA256 = "7c982c9c47d616a8a25c6761e95c706f0b166a1da4cbf2bc563caeabd48f8358";
+const VERSION = "0.6.0-beta.11";
+const SHA256 = "4819d3994490beb3eb75e0dfca9c236158e66b648a927de1efb2e0a5a6f9f36f";
 const ZIP = `/releases/StreamShield-Protection-${VERSION}-Windows.zip`;
 
 Deno.serve((req: Request) => {
