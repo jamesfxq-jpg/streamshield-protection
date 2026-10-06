@@ -442,6 +442,22 @@ async function runPreflight(session) {
     await store.saveSession(session);
     return result;
 }
+function safeNetworkLabel(row) {
+    const label = String(row?.network_label || "").trim();
+    if (/^NET-[A-F0-9]{8}$/.test(label)) return label;
+    const hash = String(row?.network_hash || "").toLowerCase();
+    return /^[a-f0-9]{64}$/.test(hash) ? "NET-" + hash.slice(-8).toUpperCase() : "Verified network";
+}
+function redactNetworkHistory(result) {
+    const history = Array.isArray(result?.history) ? result.history : [];
+    return {
+        ...(result && typeof result === "object" ? result : {}),
+        history: history.map(row => {
+            const { ip, ip_address, display_ip, ...rest } = row || {};
+            return { ...rest, network_label: safeNetworkLabel(row) };
+        }),
+    };
+}
 function rowMatchesUser(row, userId, username) {
     const numeric = [row?.kick_user_id, row?.user_id, row?.source_user_id, row?.source_kick_user_id].map(Number).filter(Number.isFinite);
     if (numeric.includes(userId))
@@ -469,7 +485,7 @@ async function buildOffenderCase(session, userId) {
             const nh = await getRemoteNetworkHistory(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey);
             const history = nh?.history ?? nh;
             const rows = Array.isArray(history) ? history : [history?.observations, history?.blocks, history?.items, history?.networks].filter(Array.isArray).flat();
-            networkMatches = rows.filter(r => rowMatchesUser(r, userId, username)).slice(0, 20).map(r => ({ ip: r.ip || r.ip_address || r.display_ip || "Verified IP", blocked: typeof r.blocked === "boolean" ? r.blocked : typeof r.is_blocked === "boolean" ? r.is_blocked : Boolean(r.blocked_at && (!r.unblocked_at || Date.parse(r.blocked_at) > Date.parse(r.unblocked_at))), firstSeenAt: r.first_seen_at || r.blocked_at || "", lastSeenAt: r.last_seen_at || r.last_match_at || r.unblocked_at || "", matchCount: Number(r.match_count || 0) }));
+            networkMatches = rows.filter(r => rowMatchesUser(r, userId, username)).slice(0, 20).map(r => ({ networkLabel: safeNetworkLabel(r), blocked: typeof r.blocked === "boolean" ? r.blocked : typeof r.is_blocked === "boolean" ? r.is_blocked : Boolean(r.blocked_at && (!r.unblocked_at || Date.parse(r.blocked_at) > Date.parse(r.unblocked_at))), firstSeenAt: r.first_seen_at || r.blocked_at || "", lastSeenAt: r.last_seen_at || r.last_match_at || r.unblocked_at || "", matchCount: Number(r.match_count || 0) }));
         }
         catch { }
     }
@@ -1146,7 +1162,7 @@ const server = http.createServer(async (req, res) => {
                 return send(res, 503, JSON.stringify({ ok: false, error: "StreamShield cloud backend is not connected" }), "application/json");
             try {
                 const result = await getRemoteNetworkHistory(remoteBackendUrl, s.broadcasterId, s.remoteInstallKey);
-                return send(res, 200, JSON.stringify(result), "application/json");
+                return send(res, 200, JSON.stringify(redactNetworkHistory(result)), "application/json");
             }
             catch (e) {
                 return send(res, 502, JSON.stringify({ ok: false, error: e.message }), "application/json");
@@ -1616,7 +1632,7 @@ const server = http.createServer(async (req, res) => {
             return send(res, 204, "");
         }
         if (req.method === "GET" && url.pathname === "/health")
-            return send(res, 200, JSON.stringify({ ok: true, kickConfigured, publicOauthBroker, sessions: store.sessions.size, kickPrimary: true, encryptedStateAtRest: true, persistentWebhookIdempotency: true, nativeIncidentPdf: true, nativeStreamSummaryPdf: true, automaticStreamReports: true, sha256EvidenceSeals: true, offenderCaseFiles: true, preStreamProtectionCheck: true, recoveryCenter: true, followShield: true, chatRaidShield: true, networkProtectionAvailable: remoteBackendConfigured, targetedVerificationAvailable: remoteBackendConfigured, firstPartyDeviceTokens: true, invasiveDeviceFingerprinting: false, storesRawViewerIps: false, storesEncryptedVerifiedIps: true, publicWebhookAvailable, temporaryWebhookTunnel, webhookPublicUrl: publicWebhookAvailable ? webhookPublicUrl : "", remoteBackendConfigured, remoteBackendUrl: remoteBackendConfigured ? remoteBackendUrl : "", requiredKickEvents: KICK_EVENT_NAMES }), "application/json");
+            return send(res, 200, JSON.stringify({ ok: true, kickConfigured, publicOauthBroker, sessions: store.sessions.size, kickPrimary: true, encryptedStateAtRest: true, persistentWebhookIdempotency: true, nativeIncidentPdf: true, nativeStreamSummaryPdf: true, automaticStreamReports: true, sha256EvidenceSeals: true, offenderCaseFiles: true, preStreamProtectionCheck: true, recoveryCenter: true, followShield: true, chatRaidShield: true, networkProtectionAvailable: remoteBackendConfigured, targetedVerificationAvailable: remoteBackendConfigured, firstPartyDeviceTokens: true, invasiveDeviceFingerprinting: false, storesRawViewerIps: false, storesEncryptedVerifiedIps: false, storesHashedNetworkIdentifiers: true, publicWebhookAvailable, temporaryWebhookTunnel, webhookPublicUrl: publicWebhookAvailable ? webhookPublicUrl : "", remoteBackendConfigured, remoteBackendUrl: remoteBackendConfigured ? remoteBackendUrl : "", requiredKickEvents: KICK_EVENT_NAMES }), "application/json");
         return send(res, 404, "Not found", "text/plain");
     }
     catch (e) {
