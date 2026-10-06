@@ -5,4 +5,4 @@
 
 .verify-minimal{min-height:100vh;display:grid;place-items:center;background:#05070a}.verify-minimal-shell{width:min(92vw,560px);padding:24px}.verify-minimal-shell form,.verify-minimal-shell fieldset{margin:0;padding:0;border:0}.verify-only-button{width:100%;min-height:64px;font-size:18px;border-radius:14px}.verify-error{margin-top:14px;padding:12px 14px;border-radius:10px;background:#301e20;border:1px solid #744145;color:#ffd0d0;text-align:center;font-size:14px}
 
-.verify-disclosure{margin:8px auto 0;max-width:420px;text-align:center;color:#718079;font-size:11px;line-height:1.25;font-weight:400}.verify-disclosure a{color:#83928a;text-decoration:underline;text-underline-offset:2px}
+.verify-disclosure{margin:8px auto 0;max-width:440px;text-align:center;color:#9aa8a1;font-size:12px;line-height:1.35;font-weight:400}.verify-disclosure a{color:#b0bdb6;text-decoration:underline;text-underline-offset:2px}
