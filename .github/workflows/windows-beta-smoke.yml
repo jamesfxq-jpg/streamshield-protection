@@ -1,0 +1,40 @@
+name: Windows published beta smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/windows-beta-smoke.yml'
+      - 'tests/windows-beta-smoke.ps1'
+      - 'release.json'
+      - 'releases/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-published-beta-smoke
+  cancel-in-progress: false
+
+jobs:
+  windows-installer:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - name: Check out the exact triggering public commit
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          git init .
+          if ($LASTEXITCODE -ne 0) { throw 'git init failed' }
+          git remote add origin "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY.git"
+          if ($LASTEXITCODE -ne 0) { throw 'git remote failed' }
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin $env:GITHUB_SHA
+          if ($LASTEXITCODE -ne 0) { throw 'git fetch failed' }
+          git checkout --detach FETCH_HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'git checkout failed' }
+          if ((git rev-parse HEAD).Trim() -ne $env:GITHUB_SHA) { throw 'Checkout SHA mismatch' }
+      - name: Test the unchanged published installer without KICK access
+        shell: pwsh
+        run: ./tests/windows-beta-smoke.ps1
