@@ -6,7 +6,7 @@ import { StreamShieldDetector } from "./detector.js";
 import { RuntimeStore } from "./store.js";
 import { compactDashboard, dashboard, landing, overlay, privacy, report, terms } from "./ui.js";
 import { buildIncidentPdf } from "./pdfReport.js";
-import { banKickUser, deleteKickChatMessage, exchangeKickCode, getKickChannel, getKickLivestreamForUser, getKickUser, KICK_EVENT_NAMES, listKickSubscriptions, makeKickAuthorizeUrl, makePkce, refreshKickToken, revokeKickToken, subscribeKickEvents, timeoutKickUser, unbanKickUser, } from "./kickClient.js";
+import { banKickUser, deleteKickChatMessage, exchangeKickCode, getKickChannel, getKickLivestreamForUser, getKickUser, KICK_EVENT_NAMES, listKickSubscriptions, makeKickAuthorizeUrl, makePkce, refreshKickToken, revokeKickToken, sendKickChatMessage, subscribeKickEvents, timeoutKickUser, unbanKickUser, } from "./kickClient.js";
 import { verifyKickWebhook } from "./kickSignature.js";
 import { completeRemoteModeratorCommand, completeRemoteNetworkQueue, completeRemoteVerification, createRemoteModeratorInvite, createRemoteVerificationRequest, deleteRemoteChannelData, getRemoteEvents, getRemoteModeratorAccess, getRemoteModeratorCommands, getRemoteNetworkHistory, getRemoteNetworkQueue, getRemoteNetworkStatus, getRemoteVerificationQueue, getRemoteVerificationRecent, redeemRemoteKickOauth, refreshRemoteKickToken, registerRemoteBackend, revokeRemoteModerator, setRemoteNetworkSettings, startRemoteKickOauth, unblockRemoteNetwork, } from "./remoteBackend.js";
 function loadDotEnv() {
@@ -118,6 +118,16 @@ async function observePermanentUserBan(session, userId, createdAt) {
     // Set the hold synchronously: a release already awaiting a token/queue read
     // must see it before it can issue DELETE /moderation/bans.
     await invalidateVerificationLocks(session, userId, "observed_permanent_ban_preserved");
+}
+function verificationChatText(username, userId, verificationUrl) {
+    const mention = username ? "@" + String(username).replace(/^@/, "") : "KICK user " + userId;
+    return `${mention} — StreamShield verification is required. Open this one-time link and select Continue with KICK: ${verificationUrl}`;
+}
+async function postVerificationChatMessage(session, username, userId, verificationUrl, replyToMessageId = "") {
+    const content = verificationChatText(username, userId, verificationUrl);
+    const token = await ensureFreshToken(session);
+    const sent = await sendKickChatMessage(token, session.broadcasterId, content, replyToMessageId);
+    return { content, messageId: String(sent?.data?.message_id || sent?.message_id || "") };
 }
 async function requestUserVerification(session, userId, username) {
     return withUserModeration(session, userId, async () => {
@@ -810,11 +820,19 @@ async function processModeratorCommands(session) {
                     const created = await requestUserVerification(session, userId, username);
                     const url = String(created?.verification_url || "");
                     const requestId = String(created?.request?.id || "");
-                    const mention = username ? "@" + username : "KICK user " + userId;
-                    result = { verification_url: url, request_id: requestId, ready_message: mention + " — StreamShield verification is required. Open this one-time link and select Continue with KICK: " + url };
+                    const readyMessage = verificationChatText(username, userId, url);
+                    let chatMessageSent = false, chatMessageError = "", chatMessageId = "";
+                    try {
+                        const posted = await postVerificationChatMessage(session, username, userId, url, String(payload.messageId || ""));
+                        chatMessageSent = true;
+                        chatMessageId = posted.messageId;
+                    } catch (e) {
+                        chatMessageError = String(e?.message || "KICK chat message failed").slice(0, 250);
+                    }
+                    result = { verification_url: url, request_id: requestId, ready_message: readyMessage, chat_message_sent: chatMessageSent, chat_message_id: chatMessageId, chat_message_error: chatMessageError };
                     ensureStreamStats(session).verificationRequests = (ensureStreamStats(session).verificationRequests || 0) + 1;
-                    await recordAction(session, { at: Date.now(), action: "verification_request", ok: true, detail: `Remote moderator @${item.moderator_username || item.moderator_user_id} required verification from @${username || userId}`, meta: { userId, username, requestId, remoteModeratorUserId: Number(item.moderator_user_id) || 0 } });
-                    outcome = "verification_created";
+                    await recordAction(session, { at: Date.now(), action: "verification_request", ok: true, detail: `Remote moderator @${item.moderator_username || item.moderator_user_id} required verification from @${username || userId}; KICK chat message ${chatMessageSent ? "sent automatically" : "needs manual fallback"}`, meta: { userId, username, requestId, chatMessageSent, remoteModeratorUserId: Number(item.moderator_user_id) || 0 } });
+                    outcome = chatMessageSent ? "verification_created_and_message_sent" : "verification_created_message_fallback";
                 } else if (action === "timeout_10") {
                     if (!userId || userId === session.broadcasterId) throw new Error("invalid timeout target");
                     await applyUserTimeout(session, userId, 10, "StreamShield remote moderator timeout");
@@ -1497,6 +1515,7 @@ const server = http.createServer(async (req, res) => {
                 const b = await jsonBody(req);
                 const userId = Math.trunc(Number(b.userId));
                 const username = String(b.username || "").slice(0, 100);
+                const messageId = String(b.messageId || "").slice(0, 200);
                 if (!Number.isFinite(userId) || userId <= 0)
                     return send(res, 400, "valid userId required", "text/plain");
                 if (userId === s.broadcasterId)
@@ -1504,10 +1523,21 @@ const server = http.createServer(async (req, res) => {
                 try {
                     const result = await requestUserVerification(s, userId, username);
                     const requestId = String(result?.request?.id || "");
-                    await recordAction(s, { at: Date.now(), action: "verification_request", ok: true, detail: `Required verification from @${username || userId}`, meta: { userId, username, requestId } });
-                    pushEvent(s, { kind: "action", title: "Channel verification required", detail: `@${username || userId} cannot chat until verification finishes. The one-time link is private to the moderator dashboard until you choose how to deliver it.`, ok: true });
+                    const verificationUrl = String(result?.verification_url || "");
+                    const readyMessage = verificationChatText(username, userId, verificationUrl);
+                    let chatMessageSent = false, chatMessageError = "", chatMessageId = "";
+                    try {
+                        const posted = await postVerificationChatMessage(s, username, userId, verificationUrl, messageId);
+                        chatMessageSent = true;
+                        chatMessageId = posted.messageId;
+                    } catch (e) {
+                        chatMessageError = String(e?.message || "KICK chat message failed").slice(0, 250);
+                    }
+                    const response = { ...result, ready_message: readyMessage, chat_message_sent: chatMessageSent, chat_message_id: chatMessageId, chat_message_error: chatMessageError };
+                    await recordAction(s, { at: Date.now(), action: "verification_request", ok: true, detail: `Required verification from @${username || userId}; KICK chat message ${chatMessageSent ? "sent automatically" : "needs manual fallback"}`, meta: { userId, username, requestId, chatMessageSent } });
+                    pushEvent(s, { kind: "action", title: "Channel verification required", detail: chatMessageSent ? `@${username || userId} cannot chat until verification finishes. StreamShield automatically replied in KICK chat with the one-time verification link.` : `@${username || userId} cannot chat until verification finishes. KICK could not auto-post the message, so use the copied fallback message.`, ok: true });
                     broadcast(s);
-                    return send(res, 200, JSON.stringify(result), "application/json");
+                    return send(res, 200, JSON.stringify(response), "application/json");
                 }
                 catch (e) {
                     await recordAction(s, { at: Date.now(), action: "verification_request", ok: false, detail: e.message });
