@@ -15,8 +15,9 @@
 <form id="verification-form" method="post" action="https://blrdvuhnxtwnsphdxpkg.supabase.co/functions/v1/streamshield-backend/verification/kick">
 <fieldset id="verification-fields" disabled>
 <input type="hidden" name="consent" value="yes">
-<button id="continue-button" class="button verify-only-button" type="submit" disabled>Continue with KICK — verify account &amp; connection</button>
+<button id="continue-button" class="button verify-only-button" type="submit" disabled>Continue with KICK</button>
 </fieldset>
+<p class="verify-disclosure">Continuing verifies your KICK account and connection for channel moderation. <a href="/privacy">Privacy</a></p>
 </form>
 <p id="link-status" class="verify-error" hidden role="status" aria-live="polite"></p>
 <noscript><p class="verify-error">JavaScript is required to use this verification link.</p></noscript>
