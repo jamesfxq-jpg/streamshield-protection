@@ -24,7 +24,8 @@ $env:STREAMSHIELD_PUBLIC_OAUTH = '0'
 $env:KICK_CLIENT_ID = ''
 $env:KICK_CLIENT_SECRET = ''
 $env:KICK_WEBHOOK_PUBLIC_URL = ''
-$env:NODE_OPTIONS = '--require="' + (Join-Path $work.FullName 'no-network.cjs') + '"'
+$guardPath = (Join-Path $work.FullName 'no-network.cjs').Replace('\','/')
+$env:NODE_OPTIONS = '--require="' + $guardPath + '"'
 & $node --version
 $stdout = Join-Path $work.FullName 'direct-start.stdout.log'
 $stderr = Join-Path $work.FullName 'direct-start.stderr.log'
