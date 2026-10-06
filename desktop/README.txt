@@ -148,8 +148,11 @@ Moderator workflow clarity:
 - Compact Control now includes a Mod Guide button for an easy live-stream reference.
 - Require Verification now copies a ready-to-paste message containing the selected @username, short instructions, and the one-time verification link instead of copying only the raw URL.
 - The public Moderator Guide explains what human KICK moderators can and cannot access in this beta.
-- Beta 11 is explicit that separate remote StreamShield moderator logins are not implemented yet. The current dashboard and Compact Control are local to the StreamShield installation.
-- Streamers should never share KICK passwords, OAuth tokens, stream keys, or Windows credentials with moderators.
+- The streamer can now select a specific recent KICK chatter and create a private StreamShield moderator invite bound to that exact KICK user ID.
+- Selected moderators connect with their own KICK account and receive a restricted remote Mod Dashboard plus Compact Pop-Out.
+- Remote moderator actions are queued through the StreamShield cloud service and executed by the streamer’s authorized desktop, so the streamer’s KICK password, OAuth token, stream key, and Windows credentials are never shared.
+- The streamer can revoke a selected moderator at any time; active remote sessions are revoked with it.
+- Remote mods can Delete, Verify, Timeout 10m, Permanent Ban, Unban, and open Case Files. They cannot change Full Protection, disconnect KICK, delete StreamShield data, or view full IP addresses.
 
 
 PRIVACY HARDENING - BETA 11
