@@ -39,7 +39,7 @@ metadata = {
     "sha256": digest,
     "size_bytes": len(payload),
     "published_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-    "notes": "Corrected dashboard and compact controls, conservative verification recovery, preserved reconnect state, honest relay readiness, hosted consent pages, sealed stream reports and OBS branding. Live KICK channel validation remains pending.",
+    "notes": "Adds clearer streamer/moderator workflow, Moderator Guide buttons in full and compact dashboards, and ready-to-paste targeted-verification messages. Separate remote moderator logins are not yet included.",
 }
 (ROOT / "release.json").write_text(json.dumps(metadata, indent=2) + "\n")
 RELEASE.with_suffix(RELEASE.suffix + ".sha256").write_text(f"{digest}  {FILENAME}\n")
