@@ -3,8 +3,8 @@
   "channel": "beta",
   "filename": "StreamShield-Protection-0.6.0-beta.11-Windows.zip",
   "download_url": "https://streamshield-protection-public.vercel.app/releases/StreamShield-Protection-0.6.0-beta.11-Windows.zip",
-  "sha256": "6a2952e8d13d688f9bed05ea8c467e251d6dbf6ffde3b705728040719a065b57",
-  "size_bytes": 2730169,
-  "published_at": "2026-10-06T03:24:35Z",
+  "sha256": "4819d3994490beb3eb75e0dfca9c236158e66b648a927de1efb2e0a5a6f9f36f",
+  "size_bytes": 2730164,
+  "published_at": "2026-10-06T03:43:54Z",
   "notes": "Adds streamer-selected remote moderator access with a restricted Mod Dashboard and Compact Pop-Out, ready-to-paste verification messages, and hash-only network identity: full viewer IPs are not stored or shown."
 }
