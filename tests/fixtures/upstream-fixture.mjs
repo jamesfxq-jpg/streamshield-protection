@@ -12,6 +12,7 @@ globalThis.fetch=async (raw,init={})=>{
   if(p.endsWith('/release/latest'))return response({ok:true,release:null});
   if(p.endsWith('/events'))return response({ok:true,events:[]});
   if(p.endsWith('/network/status'))return response({ok:true,network:{enabled:true,auto_ban_exact_network_match:false,blocked_networks:1}});
+  if(p.endsWith('/network/settings')&&method==='POST')return response({ok:true,enabled:true,auto_ban_exact_network_match:false,observation_retention_days:30});
   if(p.endsWith('/network/history'))return response({ok:true,history:[{network_hash:'a'.repeat(64),ip:'192.0.2.20',blocked:true}]});
   if(p.endsWith('/network/queue')||p.endsWith('/verification/queue')||p.endsWith('/verification/recent')||p.endsWith('/moderator/install/commands'))return response({ok:true,items:[]});
   if(p.endsWith('/moderator/install/access'))return response({ok:true,moderators:[{kick_user_id:910000003,kick_username:'qa_mod',approved_at:'2026-10-06T00:00:00Z'}],pending_invites:[]});
