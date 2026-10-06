@@ -10,6 +10,7 @@ export const KICK_SCOPES = [
     "user:read",
     "channel:read",
     "events:subscribe",
+    "chat:write",
     "moderation:ban",
     "moderation:chat_message:manage",
 ];
@@ -121,6 +122,20 @@ export async function deleteKickChatMessage(token, messageId) {
     return jsonFetch(`https://api.kick.com/public/v1/chat/${encodeURIComponent(messageId)}`, {
         method: "DELETE",
         headers: auth(token),
+    });
+}
+export async function sendKickChatMessage(token, broadcasterUserId, content, replyToMessageId = "") {
+    const body = {
+        broadcaster_user_id: broadcasterUserId,
+        content: String(content || "").slice(0, 500),
+        type: "user",
+    };
+    if (replyToMessageId)
+        body.reply_to_message_id = String(replyToMessageId);
+    return jsonFetch("https://api.kick.com/public/v1/chat", {
+        method: "POST",
+        headers: { ...auth(token), "Content-Type": "application/json" },
+        body: JSON.stringify(body),
     });
 }
 export async function timeoutKickUser(token, broadcasterUserId, userId, minutes, reason) {
