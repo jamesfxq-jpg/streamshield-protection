@@ -1,0 +1,6 @@
+desktop/app/data/
+desktop/app/node_modules/
+desktop/app/.env.local
+desktop/runtime/
+__pycache__/
+*.pyc

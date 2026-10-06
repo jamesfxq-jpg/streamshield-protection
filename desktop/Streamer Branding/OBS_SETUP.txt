@@ -1,0 +1,16 @@
+STREAMSHIELD OBS BRANDING
+
+Included files
+- StreamShield_Full_Overlay.png — full stacked logo for scenes, starting/ending screens, and larger placements.
+- StreamShield_Horizontal_Overlay.png — horizontal logo for lower thirds and small branded panels.
+- StreamShield_Shield_Badge.png — shield-only badge for a subtle stream-corner placement.
+- StreamShield_Brand_Kit_Preview.png — visual brand preview.
+
+OBS setup
+1. Open OBS Studio.
+2. In Sources, click + and choose Image.
+3. Select one of the PNG files above.
+4. Resize and position it where you want on your scene.
+5. Lock the source after placement so it is not moved accidentally.
+
+These overlay PNGs use transparency. Keep the original aspect ratio when resizing.

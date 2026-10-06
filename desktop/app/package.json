@@ -1,0 +1,21 @@
+{
+  "name": "streamshield-protection",
+  "version": "0.6.0-beta.10",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node dist/src/server.js",
+    "test": "node --test dist/tests/*.test.js",
+    "simulate": "node dist/src/simulator.js",
+    "doctor": "node dist/src/doctor.js",
+    "build": "tsc -p tsconfig.json",
+    "doctor:ci": "STREAMSHIELD_DOCTOR_ALLOW_UNCONFIGURED=1 STREAMSHIELD_DOCTOR_SKIP_NETWORK=1 node dist/src/doctor.js"
+  },
+  "devDependencies": {
+    "@types/node": "24.0.4",
+    "typescript": "5.8.3"
+  }
+}

@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+import {mkdtemp} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {spawn} from 'node:child_process';
+import {once} from 'node:events';
+import vm from 'node:vm';
+import {RuntimeStore} from '../desktop/app/dist/src/store.js';
+const fixturePath=new URL('./fixtures/upstream-fixture.mjs',import.meta.url).href;
+const packageRoot=process.env.QA_PACKAGE_ROOT||fileURLToPath(new URL('../desktop',import.meta.url));
+const data=await mkdtemp(join(tmpdir(),'streamshield-runtime-qa-'));
+const store=new RuntimeStore(data);await store.init();
+const s=store.createSession({broadcasterId:910000001,username:'QA Fixture',slug:'qa_fixture',token:{access_token:'fake_qa_token',refresh_token:'fake_qa_refresh',expires_in:3600},tokenExpiresAt:Date.now()+3600000,isLive:false});
+s.remoteBackendRegistered=true;s.remoteBackendError='QA fixture: relay is unreachable';s.subscriptionHealthy=true;s.lastSubscriptionCheckAt=Date.now();s.lastPollAt=Date.now();
+await store.persistSessions();
+const port=18897,base='http://localhost:'+port;
+const child=spawn(process.execPath,['--import',fixturePath,packageRoot+'/app/dist/src/server.js'],{cwd:packageRoot+'/app',env:{...process.env,DATA_DIR:data,PORT:String(port),PUBLIC_BASE_URL:base,STREAMSHIELD_REMOTE_BACKEND_URL:'https://qa.invalid',KICK_CLIENT_ID:'',KICK_CLIENT_SECRET:''},stdio:['ignore','pipe','pipe']});
+let logs='';child.stdout.on('data',x=>logs+=x);child.stderr.on('data',x=>logs+=x);
+const headers={'cookie':'ss_session='+s.id,'x-streamshield-csrf':s.csrfToken,'content-type':'application/json','origin':base};
+const post=(path,body={})=>fetch(base+path,{method:'POST',headers,body:JSON.stringify(body)});
+try{
+ let ready=false;for(let i=0;i<50;i++){try{const r=await fetch(base+'/health');if(r.ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,50));}assert.ok(ready,'server starts');
+ const health=await (await fetch(base+'/health')).json();assert.equal(health.ok,true);assert.equal(health.encryptedStateAtRest,true);
+ for(const path of ['/','/privacy','/terms','/dashboard','/compact']){const r=await fetch(base+path,{headers});assert.equal(r.status,200,path);const html=await r.text();for(const m of html.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(m[1]);}
+ assert.equal((await fetch(base+'/api/network-history')).status,401);
+ assert.equal((await fetch(base+'/api/trusted-user',{method:'POST',headers:{cookie:headers.cookie,'content-type':'application/json'},body:'{}'})).status,403);
+ const preflight=await (await post('/api/preflight')).json();console.log('PREFLIGHT with known relay failure: '+preflight.preflight.label+'; cloud='+JSON.stringify(preflight.preflight.checks.find(x=>x.key==='cloud_relay')));
+ assert.equal((await post('/api/trusted-user',{userId:910000002,trusted:true})).status,204);
+ const recovered=await (await post('/api/recovery/undo-last')).json();assert.equal(recovered.reversed,'trusted_user_changed');
+ assert.equal((await post('/api/panic',{active:true})).status,204);
+ const panic=await (await post('/api/recovery/undo-last')).json();assert.equal(panic.reversed,'panic_mode_activated');
+ assert.equal((await post('/api/moderate/timeout',{userId:910000002,minutes:10})).status,204);
+ const timeout=await (await post('/api/recovery/undo-last')).json();assert.equal(timeout.reversed,'timeout_user');
+ const r=await post('/api/stream-report',{force:true});assert.equal(r.status,200);const report=await r.json();assert.equal(report.report.sealValid,true);
+ const seal=await (await post('/api/report-verify',{id:report.report.id})).json();assert.equal(seal.valid,true);
+ const pdf=await fetch(base+report.report.pdfUrl,{headers});assert.equal(pdf.status,200);assert.equal(Buffer.from(await pdf.arrayBuffer()).subarray(0,5).toString(),'%PDF-');
+ const history=await (await fetch(base+'/api/network-history',{headers})).json();assert.equal(history.history[0].ip,'192.0.2.20');
+ console.log('PASS: isolated startup, 5 HTML endpoints + inline script syntax, /health, auth/CSRF guards, trust/panic/timeout recovery, sealed report + verification + PDF, network-history passthrough.');
+ console.log('No actual KICK/cloud requests: server fetch preloaded with deterministic fixtures and reject-all fallback.');
+} finally {child.kill('SIGTERM');await once(child,'exit');console.log(logs.trim());}

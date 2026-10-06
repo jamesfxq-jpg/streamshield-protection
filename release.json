@@ -1,0 +1,10 @@
+{
+  "version": "0.6.0-beta.10",
+  "channel": "beta",
+  "filename": "StreamShield-Protection-0.6.0-beta.10-Windows.zip",
+  "download_url": "https://streamshield-protection-public.vercel.app/releases/StreamShield-Protection-0.6.0-beta.10-Windows.zip",
+  "sha256": "7c982c9c47d616a8a25c6761e95c706f0b166a1da4cbf2bc563caeabd48f8358",
+  "size_bytes": 2726565,
+  "published_at": "2026-10-06T01:07:38Z",
+  "notes": "Corrected dashboard and compact controls, conservative verification recovery, preserved reconnect state, honest relay readiness, hosted consent pages, sealed stream reports and OBS branding. Live KICK channel validation remains pending."
+}
