@@ -38,6 +38,7 @@ try{
  const history=await (await fetch(base+'/api/network-history',{headers})).json();assert.equal(history.history[0].ip,undefined);assert.equal(history.history[0].network_label,'NET-AAAAAAAA');
  const modAccess=await (await fetch(base+'/api/moderator/access',{headers})).json();assert.equal(modAccess.moderators[0].kick_username,'qa_mod');
  const modInvite=await (await post('/api/moderator/invite',{userId:910000003,username:'qa_mod'})).json();assert.match(modInvite.invite_url,/\/mod#invite=QA_TEST_INVITE$/);
+ assert.equal((await post('/api/network-protection',{enabled:true,autoBanExactNetworkMatch:false})).status,204);
  const verify=await (await post('/api/verification/request',{userId:910000004,username:'qa_verify',messageId:'33333333-3333-4333-8333-333333333333'})).json();assert.equal(verify.chat_message_sent,true);assert.equal(verify.chat_message_id,'11111111-1111-4111-8111-111111111111');assert.match(verify.ready_message,/^@qa_verify — StreamShield verification is required\./);
  console.log('PASS: isolated startup, 5 HTML endpoints + inline script syntax, /health, auth/CSRF guards, trust/panic/timeout recovery, sealed report + verification + PDF, network-history redaction, selected-moderator access/invite, automatic KICK verification reply.');
  console.log('No actual KICK/cloud requests: server fetch preloaded with deterministic fixtures and reject-all fallback.');
