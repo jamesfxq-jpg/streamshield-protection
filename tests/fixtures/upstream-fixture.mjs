@@ -6,6 +6,7 @@ globalThis.fetch=async (raw,init={})=>{
   if(p.endsWith('/events/subscriptions')) return response({data:events.map(event=>({event,version:1,method:'webhook'}))});
   if(p.endsWith('/livestreams')) return response({data:[]});
   if(p.endsWith('/moderation/bans')) {process.stdout.write('MOCK_KICK_'+method+'\n');return response({data:{}});}
+  if(p.endsWith('/chat')&&method==='POST'){process.stdout.write('MOCK_KICK_CHAT_POST\n');return response({data:{is_sent:true,message_id:'11111111-1111-4111-8111-111111111111'}});}
  }
  if(url.hostname==='qa.invalid'){
   if(p.endsWith('/release/latest'))return response({ok:true,release:null});
@@ -16,6 +17,7 @@ globalThis.fetch=async (raw,init={})=>{
   if(p.endsWith('/moderator/install/access'))return response({ok:true,moderators:[{kick_user_id:910000003,kick_username:'qa_mod',approved_at:'2026-10-06T00:00:00Z'}],pending_invites:[]});
   if(p.endsWith('/moderator/install/invite')&&method==='POST')return response({ok:true,invite:{kick_user_id:910000003,kick_username:'qa_mod'},invite_url:'https://streamshield-protection-public.vercel.app/mod#invite=QA_TEST_INVITE'});
   if(p.endsWith('/moderator/install/revoke')&&method==='POST')return response({ok:true,revoked:true});
+  if(p.endsWith('/verification/request')&&method==='POST')return response({ok:true,request:{id:'22222222-2222-4222-8222-222222222222'},verification_url:'https://qa.invalid/verification/start?request=QA_REQUEST_TOKEN_ABCDEFGHIJKLMNOPQRSTUVWXYZ123456'});
   if(p.endsWith('/verification/complete'))return response({ok:true,completed:true});
   if(p.endsWith('/status'))return response({ok:true,channel:{broadcaster_id:910000001}});
  }
