@@ -57,12 +57,23 @@
 <li><div><strong>Run Pre-Stream Protection Check.</strong><p>Record anything shown as failed, degraded, or pending. Offline channels may legitimately be waiting for a real signed KICK event.</p></div></li>
 <li><div><strong>Generate one ordinary real event.</strong><p>During an authorized test, have a consenting account chat or follow. Confirm StreamShield receives the event and updates health/status.</p></div></li>
 <li><div><strong>Use Compact Control.</strong><p>Resize it, keep it beside your stream tools, and check that recent chat, protection status, case controls, and recovery controls remain usable.</p></div></li>
-<li><div><strong>Test a controlled verification.</strong><p>Only with a consenting test account, use <strong>Require Verification</strong>, deliver the one-time link, read the consent screen, finish verification, and confirm the intended temporary restriction is handled correctly.</p></div></li>
+<li><div><strong>Test a controlled verification.</strong><p>Only with a consenting test account: open Recent KICK Chat, click <strong>Require Verification</strong> beside that chatter, copy the one-time verification link, send it directly to that tester, have them select <strong>Continue with KICK</strong>, and confirm the verification queue and temporary restriction update correctly.</p></div></li>
 <li><div><strong>Test recovery carefully.</strong><p>Use only consenting accounts. Check timeout/unban or supported Undo actions one at a time. Confirm an independent permanent ban is not removed by an older verification unlock.</p></div></li>
 <li><div><strong>Check reporting.</strong><p>Generate or review the stream report, verify the evidence seal, and confirm the summary describes what StreamShield actually recorded.</p></div></li>
 <li><div><strong>Check OBS branding.</strong><p>Add one included PNG as an OBS Image source. Confirm it looks sharp, resizes cleanly, and does not interfere with your normal scene layout.</p></div></li>
 </ol>
 <div class="notice"><p><strong>Do not use ordinary viewers as test subjects for bans or verification.</strong> Moderation and verification tests should be limited to accounts that explicitly agreed to participate.</p></div>
+</section>
+
+<section class="section card">
+<div class="eyebrow">Moderator workflow</div><h2>How to select a viewer for StreamShield Verification.</h2>
+<ol class="steps">
+<li><div><strong>Open Recent KICK Chat.</strong><p>Use the full StreamShield dashboard or Compact Control while the connected channel is receiving chat.</p></div></li>
+<li><div><strong>Choose the account.</strong><p>Find the chatter you want to test and click <strong>Require Verification</strong> beside that user. StreamShield places a temporary chat restriction on that selected account.</p></div></li>
+<li><div><strong>Copy the generated link.</strong><p>The request appears in the verification queue with a one-time link. The streamer or moderator must deliver that link to the selected viewer; StreamShield cannot force a private KICK popup onto that viewer.</p></div></li>
+<li><div><strong>The viewer continues with KICK.</strong><p>The tester opens the link, selects <strong>Continue with KICK</strong>, and authorizes the KICK account named by the request.</p></div></li>
+<li><div><strong>Review the result.</strong><p>A clean result can release the StreamShield-owned temporary restriction. Network or browser-token matches should be reviewed, and exact blocked-network auto-ban should remain off during early beta testing unless the test specifically covers it.</p></div></li>
+</ol>
 </section>
 
 <section id="updates" class="section grid two">
