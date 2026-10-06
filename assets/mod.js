@@ -1,7 +1,7 @@
 "use strict";
 (() => {
   const BACKEND="https://blrdvuhnxtwnsphdxpkg.supabase.co/functions/v1/streamshield-backend";
-  const invite=new URLSearchParams(location.search).get("invite")||"";
+  const query=new URLSearchParams(location.search);const fragment=new URLSearchParams(location.hash.replace(/^#/,""));const invite=fragment.get("invite")||query.get("invite")||"";if(invite)history.replaceState(null,"","/mod");
   const status=document.getElementById("mod-invite-status");
   const details=document.getElementById("mod-invite-details");
   const copy=document.getElementById("mod-invite-copy");
