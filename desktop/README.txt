@@ -1,8 +1,8 @@
-StreamShield 0.6.0 Beta 11
+StreamShield 0.6.0 Beta 12
 
 Adds automatic evidence-sealed end-of-stream reports, Pre-Stream Protection Check, Offender Case Files, and Recovery Center on top of the Beta 8 live protection controls.
 
-STREAMSHIELD PROTECTION 0.6.0 BETA 11 - KICK
+STREAMSHIELD PROTECTION 0.6.0 BETA 12 - KICK
 
 INSTALL
 0. Right-click the downloaded ZIP and choose Extract All.
@@ -162,3 +162,16 @@ PRIVACY HARDENING - BETA 11
 - StreamShield dashboards, Compact Control, case files, reports, and moderator views display only masked network IDs such as NET-12AB34CD.
 - Previous encrypted IP ciphertext was erased from the StreamShield network tables and those storage columns were removed.
 - Exact-network matching and UN-IP BAN continue to use the non-reversible keyed network hash.
+
+
+NEW IN 0.6.0-beta.12
+--------------------
+Automatic verification delivery:
+- StreamShield now requests KICK's chat:write OAuth permission.
+- When a streamer or selected remote moderator clicks Require Verification / Verify, StreamShield first creates the one-time request and applies the temporary chat restriction.
+- After the restriction succeeds, StreamShield automatically posts the verification message into KICK chat.
+- When the selected chatter's message ID is available, StreamShield uses KICK's reply-to-message support so the verification message appears as a reply to that chatter.
+- The message includes the selected @username and one-time verification link.
+- The KICK chat post is public; it is not a private DM. The verification request remains bound to the exact selected KICK user ID, so another KICK account cannot complete it.
+- If KICK refuses or cannot send the automatic reply, StreamShield copies the same ready-made message to the clipboard as a fallback.
+- Existing Beta 11 installations must reconnect KICK once after updating so the new chat:write permission can be approved.
