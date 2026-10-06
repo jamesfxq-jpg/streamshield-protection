@@ -150,3 +150,37 @@ export async function completeRemoteVerification(url, broadcasterId, installKey,
     });
     return parse(res);
 }
+
+export async function createRemoteModeratorInvite(url,broadcasterId,installKey,userId,username="") {
+    const res=await fetch(`${base(url)}/moderator/install/invite`,{
+        method:"POST",headers:{"content-type":"application/json",accept:"application/json","x-streamshield-install-key":installKey},
+        body:JSON.stringify({broadcaster_id:broadcasterId,kick_user_id:userId,kick_username:username}),
+    });
+    return parse(res);
+}
+export async function getRemoteModeratorAccess(url,broadcasterId,installKey) {
+    const u=new URL(`${base(url)}/moderator/install/access`);
+    u.searchParams.set("broadcaster_id",String(broadcasterId));
+    const res=await fetch(u,{headers:{accept:"application/json","x-streamshield-install-key":installKey}});
+    return parse(res);
+}
+export async function revokeRemoteModerator(url,broadcasterId,installKey,userId) {
+    const res=await fetch(`${base(url)}/moderator/install/revoke`,{
+        method:"POST",headers:{"content-type":"application/json",accept:"application/json","x-streamshield-install-key":installKey},
+        body:JSON.stringify({broadcaster_id:broadcasterId,kick_user_id:userId}),
+    });
+    return parse(res);
+}
+export async function getRemoteModeratorCommands(url,broadcasterId,installKey) {
+    const u=new URL(`${base(url)}/moderator/install/commands`);
+    u.searchParams.set("broadcaster_id",String(broadcasterId));
+    const res=await fetch(u,{headers:{accept:"application/json","x-streamshield-install-key":installKey}});
+    return parse(res);
+}
+export async function completeRemoteModeratorCommand(url,broadcasterId,installKey,id,ok,outcome="",result={}) {
+    const res=await fetch(`${base(url)}/moderator/install/commands/complete`,{
+        method:"POST",headers:{"content-type":"application/json",accept:"application/json","x-streamshield-install-key":installKey},
+        body:JSON.stringify({broadcaster_id:broadcasterId,id,ok:Boolean(ok),outcome,result}),
+    });
+    return parse(res);
+}
