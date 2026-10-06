@@ -8,7 +8,7 @@ import { compactDashboard, dashboard, landing, overlay, privacy, report, terms }
 import { buildIncidentPdf } from "./pdfReport.js";
 import { banKickUser, deleteKickChatMessage, exchangeKickCode, getKickChannel, getKickLivestreamForUser, getKickUser, KICK_EVENT_NAMES, listKickSubscriptions, makeKickAuthorizeUrl, makePkce, refreshKickToken, revokeKickToken, subscribeKickEvents, timeoutKickUser, unbanKickUser, } from "./kickClient.js";
 import { verifyKickWebhook } from "./kickSignature.js";
-import { completeRemoteNetworkQueue, completeRemoteVerification, createRemoteVerificationRequest, deleteRemoteChannelData, getRemoteEvents, getRemoteNetworkHistory, getRemoteNetworkQueue, getRemoteNetworkStatus, getRemoteVerificationQueue, getRemoteVerificationRecent, redeemRemoteKickOauth, refreshRemoteKickToken, registerRemoteBackend, setRemoteNetworkSettings, startRemoteKickOauth, unblockRemoteNetwork, } from "./remoteBackend.js";
+import { completeRemoteModeratorCommand, completeRemoteNetworkQueue, completeRemoteVerification, createRemoteModeratorInvite, createRemoteVerificationRequest, deleteRemoteChannelData, getRemoteEvents, getRemoteModeratorAccess, getRemoteModeratorCommands, getRemoteNetworkHistory, getRemoteNetworkQueue, getRemoteNetworkStatus, getRemoteVerificationQueue, getRemoteVerificationRecent, redeemRemoteKickOauth, refreshRemoteKickToken, registerRemoteBackend, revokeRemoteModerator, setRemoteNetworkSettings, startRemoteKickOauth, unblockRemoteNetwork, } from "./remoteBackend.js";
 function loadDotEnv() {
     return readFile(resolve(process.cwd(), ".env"), "utf8").then(text => {
         for (const line of text.split(/\r?\n/)) {
@@ -786,6 +786,81 @@ async function processVerificationQueue(session) {
         session.verificationQueueProcessing = false;
     }
 }
+async function processModeratorCommands(session) {
+    if (!remoteBackendConfigured || !session.remoteBackendRegistered || !session.remoteInstallKey || session.moderatorCommandProcessing)
+        return;
+    session.moderatorCommandProcessing = true;
+    try {
+        const batch = await getRemoteModeratorCommands(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey);
+        for (const item of batch.items || []) {
+            const action = String(item.action || "");
+            const payload = item.payload || {};
+            const userId = Math.trunc(Number(payload.userId || 0));
+            const username = String(payload.username || "").slice(0, 100);
+            let ok = false, outcome = "", result = {};
+            try {
+                if (action === "delete_message") {
+                    const messageId = String(payload.messageId || "");
+                    if (!messageId) throw new Error("message ID missing");
+                    await deleteKickChatMessage(await ensureFreshToken(session), messageId);
+                    outcome = "message_deleted";
+                } else if (action === "verification_request") {
+                    if (!session.networkProtection?.enabled) throw new Error("Full Protection must be enabled before requiring verification");
+                    if (!userId || userId === session.broadcasterId) throw new Error("invalid verification target");
+                    const created = await requestUserVerification(session, userId, username);
+                    const url = String(created?.verification_url || "");
+                    const requestId = String(created?.request?.id || "");
+                    const mention = username ? "@" + username : "KICK user " + userId;
+                    result = { verification_url: url, request_id: requestId, ready_message: mention + " — StreamShield verification is required. Open this one-time link and select Continue with KICK: " + url };
+                    ensureStreamStats(session).verificationRequests = (ensureStreamStats(session).verificationRequests || 0) + 1;
+                    await recordAction(session, { at: Date.now(), action: "verification_request", ok: true, detail: `Remote moderator @${item.moderator_username || item.moderator_user_id} required verification from @${username || userId}`, meta: { userId, username, requestId, remoteModeratorUserId: Number(item.moderator_user_id) || 0 } });
+                    outcome = "verification_created";
+                } else if (action === "timeout_10") {
+                    if (!userId || userId === session.broadcasterId) throw new Error("invalid timeout target");
+                    await applyUserTimeout(session, userId, 10, "StreamShield remote moderator timeout");
+                    await recordAction(session, { at: Date.now(), action: "timeout_user", ok: true, detail: `Remote moderator timed out @${username || userId} for 10 minutes`, meta: { userId, username, minutes: 10, remoteModeratorUserId: Number(item.moderator_user_id) || 0 } });
+                    outcome = "timed_out_10m";
+                } else if (action === "permanent_ban") {
+                    if (!userId || userId === session.broadcasterId) throw new Error("invalid ban target");
+                    await applyPermanentUserBan(session, userId, "StreamShield remote moderator permanent ban");
+                    ensureStreamStats(session).permanentBans = (ensureStreamStats(session).permanentBans || 0) + 1;
+                    await recordAction(session, { at: Date.now(), action: "permanent_ban_user", ok: true, detail: `Remote moderator permanently banned @${username || userId}`, meta: { userId, username, remoteModeratorUserId: Number(item.moderator_user_id) || 0 } });
+                    outcome = "permanently_banned";
+                } else if (action === "unban") {
+                    if (!userId || userId === session.broadcasterId) throw new Error("invalid unban target");
+                    await releaseUserRestriction(session, userId, "remote_moderator_unban");
+                    await recordAction(session, { at: Date.now(), action: "unban_user", ok: true, detail: `Remote moderator unbanned @${username || userId}`, meta: { userId, username, remoteModeratorUserId: Number(item.moderator_user_id) || 0 } });
+                    outcome = "unbanned";
+                } else if (action === "case_file") {
+                    if (!userId) throw new Error("invalid case target");
+                    result = { caseFile: await buildOffenderCase(session, userId) };
+                    outcome = "case_file_ready";
+                } else {
+                    throw new Error("unsupported moderator command");
+                }
+                ok = true;
+            }
+            catch (e) {
+                outcome = String(e?.message || "moderator command failed").slice(0, 180);
+                await recordAction(session, { at: Date.now(), action: "remote_moderator_" + (action || "unknown"), ok: false, detail: outcome, meta: { userId, remoteModeratorUserId: Number(item.moderator_user_id) || 0 } });
+            }
+            try {
+                await completeRemoteModeratorCommand(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey, item.id, ok, outcome, result);
+            }
+            catch (e) {
+                console.error("moderator command completion", e.message);
+            }
+        }
+        await store.saveSession(session);
+        broadcast(session);
+    }
+    catch (e) {
+        console.error("moderator command poll", e.message);
+    }
+    finally {
+        session.moderatorCommandProcessing = false;
+    }
+}
 function suspiciousLinkSpam(content, session, senderId) {
     const text = String(content || "").toLowerCase();
     const urls = text.match(/https?:\/\/[^\s]+/g) || [];
@@ -1036,6 +1111,12 @@ setInterval(async () => {
 setInterval(async () => {
     if (!remoteBackendConfigured)
         return;
+    for (const session of store.sessions.values())
+        await processModeratorCommands(session);
+}, 2_000).unref();
+setInterval(async () => {
+    if (!remoteBackendConfigured)
+        return;
     for (const session of store.sessions.values()) {
         await syncNetworkProtection(session);
         broadcast(session);
@@ -1182,6 +1263,19 @@ const server = http.createServer(async (req, res) => {
                 return send(res, 502, JSON.stringify({ ok: false, error: e.message }), "application/json");
             }
         }
+        if (req.method === "GET" && url.pathname === "/api/moderator/access") {
+            const s = getSession(req);
+            if (!s) return send(res, 401, "Unauthorized", "text/plain");
+            if (!remoteBackendConfigured || !s.remoteBackendRegistered || !s.remoteInstallKey)
+                return send(res, 503, JSON.stringify({ ok: false, error: "StreamShield cloud backend is not connected" }), "application/json");
+            try {
+                const result = await getRemoteModeratorAccess(remoteBackendUrl, s.broadcasterId, s.remoteInstallKey);
+                return send(res, 200, JSON.stringify(result), "application/json");
+            }
+            catch (e) {
+                return send(res, 502, JSON.stringify({ ok: false, error: e.message }), "application/json");
+            }
+        }
         if (req.method === "GET" && url.pathname.startsWith("/control/")) {
             const parts = url.pathname.split("/").filter(Boolean);
             const key = parts[1] || "", action = parts[2] || "";
@@ -1262,6 +1356,39 @@ const server = http.createServer(async (req, res) => {
                 pushEvent(s, { kind: "info", title: "Surge marked organic", detail: "Streamer started a 10-minute trusted-event window.", ok: true, score: s.lastAssessment.score });
                 await reassess(s, "Streamer marked surge organic/expected");
                 return send(res, 204, "");
+            }
+            if (url.pathname === "/api/moderator/invite") {
+                if (!remoteBackendConfigured || !s.remoteBackendRegistered || !s.remoteInstallKey)
+                    return send(res, 503, JSON.stringify({ ok: false, error: "StreamShield cloud backend is not connected" }), "application/json");
+                const b = await jsonBody(req);
+                const userId = Math.trunc(Number(b.userId));
+                const username = String(b.username || "").slice(0, 100);
+                if (!Number.isFinite(userId) || userId <= 0 || userId === s.broadcasterId)
+                    return send(res, 400, JSON.stringify({ ok: false, error: "valid moderator user required" }), "application/json");
+                try {
+                    const result = await createRemoteModeratorInvite(remoteBackendUrl, s.broadcasterId, s.remoteInstallKey, userId, username);
+                    await recordAction(s, { at: Date.now(), action: "moderator_invited", ok: true, detail: `Invited @${username || userId} to StreamShield moderator access`, meta: { userId, username } });
+                    return send(res, 200, JSON.stringify(result), "application/json");
+                }
+                catch (e) {
+                    return send(res, 502, JSON.stringify({ ok: false, error: e.message || "Could not create moderator invite" }), "application/json");
+                }
+            }
+            if (url.pathname === "/api/moderator/revoke") {
+                if (!remoteBackendConfigured || !s.remoteBackendRegistered || !s.remoteInstallKey)
+                    return send(res, 503, JSON.stringify({ ok: false, error: "StreamShield cloud backend is not connected" }), "application/json");
+                const b = await jsonBody(req);
+                const userId = Math.trunc(Number(b.userId));
+                if (!Number.isFinite(userId) || userId <= 0)
+                    return send(res, 400, JSON.stringify({ ok: false, error: "valid moderator user required" }), "application/json");
+                try {
+                    const result = await revokeRemoteModerator(remoteBackendUrl, s.broadcasterId, s.remoteInstallKey, userId);
+                    await recordAction(s, { at: Date.now(), action: "moderator_revoked", ok: true, detail: `Revoked StreamShield moderator access for KICK user ${userId}`, meta: { userId } });
+                    return send(res, 200, JSON.stringify(result), "application/json");
+                }
+                catch (e) {
+                    return send(res, 502, JSON.stringify({ ok: false, error: e.message || "Could not revoke moderator access" }), "application/json");
+                }
             }
             if (url.pathname === "/api/moderator-setup") {
                 const b = await jsonBody(req);
