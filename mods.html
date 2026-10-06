@@ -21,24 +21,24 @@
 </section>
 
 <section id="verify" class="section card ip-ban-section">
-<div class="eyebrow">Targeted verification</div><h2>Verify a chatter: Select → Send → Verified.</h2>
-<div class="verify-flow">
-<article class="verify-step"><span>1</span><div><strong>Find the chatter</strong><p>Open Recent KICK Chat in the dashboard or Compact Control.</p></div></article>
-<article class="verify-step"><span>2</span><div><strong>Click Verify</strong><p>Choose <strong>Require Verification</strong> in the full dashboard or <strong>Verify</strong> in Compact Control beside that person.</p></div></article>
-<article class="verify-step"><span>3</span><div><strong>Message is copied</strong><p>StreamShield temporarily restricts that account, creates a one-time link, and copies a ready-to-paste message containing <strong>@username + instructions + the link</strong>.</p></div></article>
-<article class="verify-step"><span>4</span><div><strong>Paste it to the viewer</strong><p>Paste the copied message into KICK chat while mentioning that viewer, or send it through a private contact method already used by the channel.</p></div></article>
-<article class="verify-step"><span>5</span><div><strong>Review the result</strong><p>The viewer selects Continue with KICK. StreamShield checks that the authorized KICK account is the exact account the moderator selected.</p></div></article>
+<div class="eyebrow">Targeted verification</div><h2>Select → Send → Verified.</h2>
+<div class="verify-fast-flow">
+<article class="verify-fast-step"><div class="verify-fast-icon">1</div><div><span class="verify-role">MOD</span><h4>Select</h4><p>In Recent KICK Chat, click <strong>Verify</strong> beside the viewer.</p></div></article>
+<div class="verify-arrow" aria-hidden="true">→</div>
+<article class="verify-fast-step"><div class="verify-fast-icon">2</div><div><span class="verify-role">STREAMSHIELD</span><h4>Send</h4><p>StreamShield locks that account temporarily and copies a ready-to-paste <strong>@username + one-time link</strong> message.</p></div></article>
+<div class="verify-arrow" aria-hidden="true">→</div>
+<article class="verify-fast-step"><div class="verify-fast-icon">3</div><div><span class="verify-role">VIEWER</span><h4>Verified</h4><p>The viewer selects <strong>Continue with KICK</strong>. The wrong KICK account is rejected; a clean result can restore chat.</p></div></article>
 </div>
-<div class="verify-callout"><strong>Example copied message</strong><div class="code verify-message">@username — StreamShield verification is required. Open this one-time link and select Continue with KICK: [verification link]</div></div>
+<div class="verify-callout"><strong>Copied message</strong><div class="code verify-message">@username — StreamShield verification is required. Open this one-time link and select Continue with KICK: [verification link]</div></div>
 </section>
 
 <section id="compact" class="section card">
-<div class="eyebrow">Compact Control</div><h2>The easiest StreamShield screen for live moderation.</h2>
-<p>Click <strong>Compact Control</strong> on the main StreamShield dashboard. Keep the small window beside KICK or OBS during the stream.</p>
+<div class="eyebrow">Live moderation windows</div><h2>Use the small window that matches your role.</h2>
+<p><strong>Streamer:</strong> click <strong>Compact Control</strong> in the local StreamShield dashboard. <strong>Selected remote mod:</strong> click <strong>Compact Pop-Out</strong> in the remote Mod Dashboard. Keep either small window beside KICK or OBS.</p>
 <div class="grid">
 <article class="card"><h3>Recent chat</h3><p>See the latest chatters and use quick Case, Verify, 10-minute timeout, Ban, and Unban controls.</p></article>
 <article class="card"><h3>Verification queue</h3><p>See which selected viewers are waiting, verified, blocked, or need review. Restore chat manually when appropriate.</p></article>
-<article class="card"><h3>IP &amp; ban controls</h3><p>Review blocked verified networks by masked network ID and use UN-IP BAN when a network block needs to be reversed. Full viewer IP addresses are never shown to moderators.</p></article>
+<article class="card"><h3>Network &amp; ban controls</h3><p>Review blocked verified networks by masked network ID and use UN-IP BAN when a network block needs to be reversed. Full viewer IP addresses are never shown to moderators.</p></article>
 </div>
 <div class="notice"><p><strong>Recommended moderator routine:</strong> keep KICK chat open normally, keep Compact Control beside it, use Verify only for accounts you actually want checked, and review network matches before escalating moderation.</p></div>
 </section>
