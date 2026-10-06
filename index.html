@@ -13,7 +13,7 @@
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
 <div class="wrap">
-<nav class="site-nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/brand/streamshield-shield-badge.png" width="43" height="39" alt="">StreamShield Protection</a><div class="nav-links"><a href="#install">Setup</a><a href="#features">Features</a><a href="/beta">Beta testing</a><a href="#branding">OBS branding</a><a href="/privacy">Privacy</a></div></nav>
+<nav class="site-nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/brand/streamshield-shield-badge.png" width="43" height="39" alt="">StreamShield Protection</a><div class="nav-links"><a href="#install">Setup</a><a href="#features">Features</a><a href="#ip-ban">IP Ban</a><a href="/beta">Beta testing</a><a href="#branding">OBS branding</a><a href="/privacy">Privacy</a></div></nav>
 <main id="main">
 <section class="hero">
 <img class="hero-logo" src="/assets/brand/streamshield-shield-badge.png" width="104" height="93" alt="StreamShield shield">
@@ -32,8 +32,25 @@
 <article class="card"><h3>Recovery Center</h3><p>Undo the latest supported moderation action. Network blocks have their own <strong>UN-IP BAN</strong> control; removing a network block does not unban an already banned KICK account.</p></article>
 <article class="card"><h3>Private Event Board</h3><p>Review unusual follow and chat patterns, health changes, and defensive actions privately. Follow bursts are evidence signals and do not trigger bans from speed alone.</p></article>
 <article class="card"><h3>Incident and stream reports</h3><p>Review reports, download a PDF, and preserve the timing, reasons, and actions recorded by StreamShield. Reports support a review; they do not establish who caused an incident.</p></article>
-<article class="card"><h3>Optional viewer verification</h3><p>A viewer can consent to verify their KICK identity and connection through StreamShield. Network matching and automatic exact-match bans require the streamer’s opt-in.</p></article>
+<article class="card ip-card"><h3>IP Ban / Ban-Evasion Protection</h3><p>Block a verified connection after banning a repeat offender. If another account later verifies from that exact blocked IP, StreamShield can flag it or automatically ban the new KICK account when exact-match auto-ban is enabled.</p></article>
 </div>
+</section>
+<section id="ip-ban" class="section card ip-ban-section" aria-labelledby="ip-ban-title">
+<div class="ip-ban-heading">
+<div><div class="eyebrow">Ban-evasion protection</div><h2 id="ip-ban-title">IP Ban repeat offenders in a few clicks.</h2>
+<p class="leadSmall">StreamShield ties a KICK account to a verified connection only after that viewer uses the StreamShield verification flow. Once a verified offender is banned, that exact network can be blocked for future verified accounts.</p></div>
+<div class="ip-ban-badge">IP BAN</div>
+</div>
+<div class="ip-flow" aria-label="How StreamShield IP Ban works">
+<article class="ip-step"><span class="ip-step-number">1</span><div><h3>Viewer verifies</h3><p>The viewer selects <strong>Continue with KICK</strong>. StreamShield links that KICK account to the public IP used for the verification and stores the exact IP encrypted.</p></div></article>
+<article class="ip-step"><span class="ip-step-number">2</span><div><h3>You permanently ban them</h3><p>Use <strong>Permanent Ban</strong> from StreamShield. If that account has a verified connection, StreamShield can add that exact network to your blocked-IP history.</p></div></article>
+<article class="ip-step"><span class="ip-step-number">3</span><div><h3>They return on another account</h3><p>If a new KICK account later completes verification from the <strong>same exact blocked IP</strong>, StreamShield recognizes the network match.</p></div></article>
+<article class="ip-step"><span class="ip-step-number">4</span><div><h3>Flag it — or auto-ban</h3><p>StreamShield can surface the match for moderator review. With <strong>exact-network auto-ban</strong> enabled, the newly verified matching account can be banned automatically.</p></div></article>
+</div>
+<div class="ip-ban-actions">
+<div><strong>Need to reverse it?</strong><span> Use <strong>UN-IP BAN</strong> to remove the network block. KICK account bans and StreamShield network blocks are separate controls.</span></div>
+</div>
+<p class="mini ip-note"><strong>Important:</strong> KICK does not provide viewer IP addresses to StreamShield. A connection is only available after the viewer uses StreamShield verification. Shared, mobile, VPN, or reassigned IPs can create false matches, so automatic exact-match bans are optional.</p>
 </section>
 <section id="install" class="section card" aria-labelledby="install-title">
 <div class="eyebrow">Start here</div><h2 id="install-title">Four steps to your first check.</h2>
