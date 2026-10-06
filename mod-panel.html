@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow,noarchive">
+<title>StreamShield Mod Dashboard</title>
+<link rel="icon" href="/assets/brand/streamshield-shield-badge.png" type="image/png">
+<link rel="stylesheet" href="/assets/site.css">
+<script src="/assets/mod-panel.js" defer></script>
+</head>
+<body class="mod-panel-body">
+<main class="mod-panel-shell">
+<header class="mod-panel-top">
+<div class="mod-panel-brand"><img src="/assets/brand/streamshield-shield-badge.png" width="44" height="40" alt=""><div><div class="eyebrow">STREAMSHIELD MOD DASHBOARD</div><h1 id="mod-channel">Connecting…</h1><div id="mod-identity" class="mini"></div></div></div>
+<div class="mod-panel-actions"><button id="mod-popout" class="button secondary small">▣ Compact Pop-Out</button><button id="mod-refresh" class="button secondary small">Refresh</button><button id="mod-logout" class="button secondary small">Log out</button></div>
+</header>
+
+<div id="mod-error" class="link-status error" hidden></div>
+<div class="notice mod-owner-note"><p><strong>Selected moderator access:</strong> this panel can moderate chat and request verification, but it cannot change Full Protection, disconnect the streamer’s KICK account, delete StreamShield data, or reveal full viewer IP addresses. The streamer can revoke access at any time.</p></div>
+
+<section class="mod-status-grid">
+<div class="card"><div class="eyebrow">Desktop status</div><div id="mod-desktop-status" class="mod-big-status">Waiting</div><p class="mini">Actions run through the streamer’s authorized StreamShield desktop. It must be open for queued actions to execute.</p></div>
+<div class="card"><div class="eyebrow">Recent KICK event</div><div id="mod-last-event" class="mod-big-status">—</div><p class="mini">Last signed event seen by the StreamShield cloud relay.</p></div>
+<div class="card"><div class="eyebrow">Your access</div><div class="mod-big-status">MOD</div><p id="mod-permissions" class="mini">Restricted moderator permissions</p></div>
+</section>
+
+<section class="card mod-chat-card">
+<div class="mod-section-head"><div><div class="eyebrow">RECENT KICK CHAT</div><h2>Click the action you need.</h2></div><div class="status">SELECTED MOD ONLY</div></div>
+<div id="mod-chat"><p class="mini">Loading recent chat…</p></div>
+</section>
+
+<section class="grid two mod-secondary-grid">
+<div class="card"><div class="eyebrow">VERIFICATION QUEUE</div><h2>Viewer checks</h2><div id="mod-verification"><p class="mini">Loading…</p></div></div>
+<div class="card"><div class="eyebrow">NETWORK REVIEW</div><h2>Masked network matches</h2><p class="mini">Full viewer IPs are never shown. Only non-reversible masked network IDs are displayed.</p><div id="mod-networks"><p class="mini">Loading…</p></div></div>
+</section>
+
+<section id="mod-case-card" class="card" hidden>
+<div class="eyebrow">OFFENDER CASE FILE</div><div class="mod-section-head"><h2 id="mod-case-title">Case file</h2><button id="mod-case-close" class="button secondary small">Close</button></div>
+<pre id="mod-case-output" class="supportPreview"></pre>
+</section>
+
+<section class="card">
+<div class="eyebrow">RECENT MOD ACTIONS</div><h2>Command status</h2><div id="mod-commands"><p class="mini">No remote actions yet.</p></div>
+</section>
+
+<footer class="site-footer">StreamShield remote moderator access · Selected by the streamer · <a href="/mods" target="_blank" rel="noopener">Moderator Guide</a></footer>
+</main>
+</body></html>
