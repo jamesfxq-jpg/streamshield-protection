@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+<title>StreamShield Moderator Guide</title>
+<meta name="description" content="Simple StreamShield workflow for KICK streamers and human moderators: verification, moderation, IP-ban review, and Compact Control.">
+<link rel="canonical" href="https://streamshield-protection-public.vercel.app/mods">
+<link rel="icon" href="/assets/brand/streamshield-shield-badge.png" type="image/png">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="wrap">
+<nav class="site-nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/brand/streamshield-shield-badge.png" width="43" height="39" alt="">StreamShield Protection</a><div class="nav-links"><a href="/">Home</a><a href="#current">Current beta</a><a href="#verify">Verification</a><a href="#compact">Compact Control</a><a href="/beta">Beta testing</a></div></nav>
+<main id="main">
+<section class="hero beta-hero"><img class="hero-logo" src="/assets/brand/streamshield-shield-badge.png" width="104" height="93" alt="StreamShield shield"><span class="badge">STREAMER + MODERATOR GUIDE</span><h1>Simple tools for the people protecting the chat.</h1><p class="lead">StreamShield gives the streamer a full dashboard and a compact moderation window. Human moderators can use the same StreamShield controls when they are operating the StreamShield computer. Remote moderator accounts are not available in Beta 10 yet.</p></section>
+
+<section id="current" class="section grid two">
+<article class="card tint"><div class="eyebrow">What works today</div><h2>On the StreamShield computer</h2><p>The streamer connects KICK once. The full dashboard and <strong>Compact Control</strong> then show recent KICK chat, verification actions, timeouts, bans, case files, recovery controls, and IP-ban review.</p><p>Anyone the streamer trusts to operate that computer can use those controls during the stream.</p></article>
+<article class="card"><div class="eyebrow">Remote moderators</div><h2>Separate remote logins are coming later.</h2><p>Beta 10 does not yet give each human KICK moderator their own StreamShield login on another computer. A KICK moderator account does not automatically grant access to the local StreamShield dashboard.</p><p>The streamer should not share KICK passwords, OAuth tokens, stream keys, or Windows credentials with moderators.</p></article>
+</section>
+
+<section id="verify" class="section card ip-ban-section">
+<div class="eyebrow">Targeted verification</div><h2>How a moderator verifies one specific chatter</h2>
+<div class="verify-flow">
+<article class="verify-step"><span>1</span><div><strong>Find the chatter</strong><p>Open Recent KICK Chat in the dashboard or Compact Control.</p></div></article>
+<article class="verify-step"><span>2</span><div><strong>Click Verify</strong><p>Choose <strong>Require Verification</strong> in the full dashboard or <strong>Verify</strong> in Compact Control beside that person.</p></div></article>
+<article class="verify-step"><span>3</span><div><strong>Message is copied</strong><p>StreamShield temporarily restricts that account, creates a one-time link, and copies a ready-to-paste message containing <strong>@username + instructions + the link</strong>.</p></div></article>
+<article class="verify-step"><span>4</span><div><strong>Paste it to the viewer</strong><p>Paste the copied message into KICK chat while mentioning that viewer, or send it through a private contact method already used by the channel.</p></div></article>
+<article class="verify-step"><span>5</span><div><strong>Review the result</strong><p>The viewer selects Continue with KICK. StreamShield checks that the authorized KICK account is the exact account the moderator selected.</p></div></article>
+</div>
+<div class="verify-callout"><strong>Example copied message</strong><div class="code verify-message">@username — StreamShield verification is required. Open this one-time link and select Continue with KICK: [verification link]</div></div>
+</section>
+
+<section id="compact" class="section card">
+<div class="eyebrow">Compact Control</div><h2>The easiest StreamShield screen for live moderation.</h2>
+<p>Click <strong>Compact Control</strong> on the main StreamShield dashboard. Keep the small window beside KICK or OBS during the stream.</p>
+<div class="grid">
+<article class="card"><h3>Recent chat</h3><p>See the latest chatters and use quick Case, Verify, 10-minute timeout, Ban, and Unban controls.</p></article>
+<article class="card"><h3>Verification queue</h3><p>See which selected viewers are waiting, verified, blocked, or need review. Restore chat manually when appropriate.</p></article>
+<article class="card"><h3>IP &amp; ban controls</h3><p>Review blocked verified networks and use UN-IP BAN when a network block needs to be reversed.</p></article>
+</div>
+<div class="notice"><p><strong>Recommended moderator routine:</strong> keep KICK chat open normally, keep Compact Control beside it, use Verify only for accounts you actually want checked, and review network matches before escalating moderation.</p></div>
+</section>
+
+<section class="section card tint">
+<div class="eyebrow">Planned moderator access</div><h2>Where StreamShield should go next</h2>
+<p>A future moderator-access system can let the streamer invite a human moderator, have that moderator connect their own KICK identity, approve them for the channel, and give them a restricted remote StreamShield Mod Panel without sharing the streamer's credentials. That system is <strong>not part of Beta 10 yet</strong>.</p>
+</section>
+</main>
+<footer class="site-footer">StreamShield Protection · Moderator Guide<div class="footer-links"><a href="/">Home</a><a href="/beta">Beta testing</a><a href="/privacy">Privacy</a><a href="/terms">Terms &amp; Safe Use</a></div></footer>
+</div></body></html>
