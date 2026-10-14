@@ -1,0 +1,43 @@
+name: Quiet Shield isolated validation
+
+on:
+  push:
+    branches: ['streamshield/quiet-shield-beta13']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact public source without production credentials
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -c protocol.version=2 fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Run isolated regression fixtures
+        run: |
+          set -euo pipefail
+          node --version
+          node tests/compact-fixtures.mjs
+          node tests/health-ui-fixtures.mjs
+          node tests/runtime.mjs
+          node tests/moderation-regression.mjs
+          node tests/backend-consent.test.mjs
+          if test -f tests/quiet-shield.test.mjs; then node tests/quiet-shield.test.mjs; fi
+      - name: Archive exact source for local implementation and review
+        if: always()
+        run: git archive --format=zip --output=streamshield-source.zip HEAD
+      - name: Upload source snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: streamshield-quiet-shield-source
+          path: streamshield-source.zip
+          retention-days: 7
