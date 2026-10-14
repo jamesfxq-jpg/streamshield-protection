@@ -44,34 +44,40 @@ jobs:
               encoded = ''.join(p.read_text().strip() for p in parts)
               raw = lzma.decompress(base64.b64decode(encoded, validate=True))
               assert hashlib.sha256(raw).hexdigest() == '22e0376a5c25b84b24413763d66726a5a509d9d09e26e5781a83187fa3d78f38'
-              capsule = json.loads(raw)
-              assert capsule['format'] == 1 and len(capsule['files']) == 36
-              seen = set()
-              for item in capsule['files']:
-                  rel = Path(item['path'])
-                  assert not rel.is_absolute() and '..' not in rel.parts and '.git' not in rel.parts and '.github' not in rel.parts
-                  assert str(rel) not in seen
-                  seen.add(str(rel))
-                  target = root / rel
-                  assert not target.is_symlink()
-                  old = target.read_bytes() if target.exists() else b''
-                  if item['base'] is None:
-                      assert not target.exists(), rel
-                  else:
-                      assert hashlib.sha256(old).hexdigest() == item['base'], rel
-                  previous = 0
-                  for start, end, text in item['edits']:
-                      assert type(start) is int and type(end) is int and previous <= start <= end <= len(old)
-                      assert isinstance(text, str)
-                      previous = end
-                  new = old
-                  for start, end, text in reversed(item['edits']):
-                      new = new[:start] + text.encode('utf-8') + new[end:]
-                  assert hashlib.sha256(new).hexdigest() == item['result'], rel
-                  target.parent.mkdir(parents=True, exist_ok=True)
-                  target.write_bytes(new)
-                  print('Verified source:', rel)
-              for p in parts:
+              original = json.loads(raw)
+              assert original['format'] == 1 and len(original['files']) == 36
+              correction_file = stage / 'followup.json'
+              correction_raw = correction_file.read_bytes()
+              assert hashlib.sha256(correction_raw).hexdigest() == 'cb530c167c39653de182f7260a36c3fb957b5d2f41bb1d39bc94d23d29b05cab'
+              correction = json.loads(correction_raw)
+              assert correction['format'] == 1 and len(correction['files']) == 3
+              for capsule in [original, correction]:
+                  seen = set()
+                  for item in capsule['files']:
+                      rel = Path(item['path'])
+                      assert not rel.is_absolute() and '..' not in rel.parts and '.git' not in rel.parts and '.github' not in rel.parts
+                      assert str(rel) not in seen
+                      seen.add(str(rel))
+                      target = root / rel
+                      assert not target.is_symlink()
+                      old = target.read_bytes() if target.exists() else b''
+                      if item['base'] is None:
+                          assert not target.exists(), rel
+                      else:
+                          assert hashlib.sha256(old).hexdigest() == item['base'], rel
+                      previous = 0
+                      for start, end, text in item['edits']:
+                          assert type(start) is int and type(end) is int and previous <= start <= end <= len(old)
+                          assert isinstance(text, str)
+                          previous = end
+                      new = old
+                      for start, end, text in reversed(item['edits']):
+                          new = new[:start] + text.encode('utf-8') + new[end:]
+                      assert hashlib.sha256(new).hexdigest() == item['result'], rel
+                      target.parent.mkdir(parents=True, exist_ok=True)
+                      target.write_bytes(new)
+                      print('Verified source:', rel)
+              for p in parts + [correction_file]:
                   p.unlink()
               stage.rmdir()
           with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
@@ -184,8 +190,9 @@ jobs:
               z.extractall('.')
           stage = Path('.github/required-update-stage')
           if stage.exists():
-              for p in stage.glob('part*.b64'):
-                  p.unlink()
+              for p in list(stage.glob('part*.b64')) + [stage / 'followup.json']:
+                  if p.exists():
+                      p.unlink()
               stage.rmdir()
           PY
           git add -A
