@@ -1,118 +1,27 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="referrer" content="no-referrer">
-<title>StreamShield Protection — Windows Beta 12 for KICK</title>
-<meta name="description" content="StreamShield Windows Beta 12: suspicious engagement monitoring, compact moderation controls, readiness checks, incident reports, and optional viewer verification for KICK streamers.">
-<link rel="canonical" href="https://streamshield-protection-public.vercel.app/">
-<link rel="icon" href="/assets/brand/streamshield-shield-badge.png" type="image/png">
-<link rel="stylesheet" href="/assets/site.css">
-</head>
-<body>
-<a class="skip-link" href="#main">Skip to content</a>
-<div class="wrap">
-<nav class="site-nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/brand/streamshield-shield-badge.png" width="43" height="39" alt="">StreamShield Protection</a><div class="nav-links"><a href="#install">Setup</a><a href="#features">Features</a><a href="/mods">Moderator Guide</a><a href="#ip-ban">IP Ban</a><a href="/beta">Beta testing</a><a href="#branding">OBS branding</a><a href="/privacy">Privacy</a></div></nav>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><title>Keep your stream moving · StreamShield</title>
+<meta name="description" content="KICK moderation in one workspace: live monitoring, chat verification, Ban &amp; Shield, compact moderator tools, and incident reports."><link rel="canonical" href="https://streamshield-protection-public.vercel.app/">
+
+<link rel="icon" href="/assets/brand/streamshield-shield-badge.png" type="image/png"><link rel="stylesheet" href="/assets/site.css">
+</head><body><a class="skip-link" href="#main">Skip to content</a><div class="wrap">
+<nav class="site-nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/brand/streamshield-shield-badge.png" width="43" height="39" alt="">StreamShield Protection</a><div class="nav-links"><a href="/how-it-works">How it works</a><a href="/#features">Features</a><a href="/mods">For moderators</a><a href="/update">Get the update</a><a href="/beta">Beta feedback</a></div></nav>
 <main id="main">
-<section class="hero">
-<img class="hero-logo" src="/assets/brand/streamshield-shield-badge.png" width="104" height="93" alt="StreamShield shield">
-<span class="badge">WINDOWS · 0.6.0-BETA.12</span>
-<h1>Keep your attention on the stream.</h1>
-<p class="lead">Monitor suspicious KICK engagement, manage moderation from a compact control window, and keep clear evidence when an incident happens.</p>
-<div class="actions"><a class="button" href="/releases/StreamShield-Protection-0.6.0-beta.12-Windows.zip" download>Download Windows Beta 12</a><a class="button secondary" href="#install">Get set up</a><a class="button secondary" href="/beta">Beta tester guide</a></div>
-<p class="mini">Version 0.6.0-beta.12 · Windows ZIP · Beta software</p>
-</section>
-<div class="notice"><p><strong>What protection means:</strong> StreamShield detects patterns and uses supported moderation controls. It cannot prevent platform-side fake follows, remove all artificial viewers, or obtain KICK viewers’ IP addresses. An anomaly score is a reason to investigate, not proof of misconduct.</p></div>
-<section id="features" class="section" aria-labelledby="features-title">
-<div class="eyebrow">Built for the moments that matter</div><h2 id="features-title">Your key controls, close at hand.</h2>
-<div class="grid">
-<article class="card tint"><h3>Streamer + Moderator Controls</h3><p>The streamer gets the full dashboard and Compact Control. Selected KICK moderators can be invited to their own restricted remote Mod Dashboard with a Compact Pop-Out. <a href="/mods">See the moderator workflow.</a></p></article>
-<article class="card"><h3>Pre-Stream Check</h3><p>Check KICK authorization, event monitoring, the cloud relay, enabled shields, and evidence logging before going live. Missing live signals stay visible as pending checks.</p></article>
-<article class="card"><h3>Recovery Center</h3><p>Undo the latest supported moderation action. Network blocks have their own <strong>UN-IP BAN</strong> control; removing a network block does not unban an already banned KICK account.</p></article>
-<article class="card"><h3>Automatic Verification Reply</h3><p>Click <strong>Verify</strong> beside a chatter and StreamShield automatically replies to that person in KICK chat with the one-time verification link. If KICK cannot send it, the ready-made message is copied as a fallback.</p></article>
-<article class="card"><h3>Incident and stream reports</h3><p>Review reports, download a PDF, and preserve the timing, reasons, and actions recorded by StreamShield. Reports support a review; they do not establish who caused an incident.</p></article>
-<article class="card ip-card"><h3>IP Ban / Ban-Evasion Protection</h3><p>Block a verified connection after banning a repeat offender. If another account later verifies from the same blocked network identity, StreamShield can flag it or automatically ban the new KICK account when exact-match auto-ban is enabled.</p></article>
-</div>
-</section>
-<section id="ip-ban" class="section card ip-ban-section" aria-labelledby="ip-ban-title">
-<div class="ip-ban-heading">
-<div><div class="eyebrow">Ban-evasion protection</div><h2 id="ip-ban-title">IP Ban repeat offenders in a few clicks.</h2>
-<p class="leadSmall">The streamer or a selected StreamShield moderator can choose a specific chatter directly from Recent KICK Chat. StreamShield temporarily restricts that KICK account, creates a one-time verification link, and automatically replies to that viewer in KICK chat with the link. Once a verified offender is banned, that exact network identity can be blocked for future verified accounts.</p></div>
-<div class="ip-ban-badge">IP BAN</div>
-</div>
-<div class="target-verify verify-fast">
-<div class="verify-fast-head">
-<div><div class="eyebrow">Targeted StreamShield Verification</div><h3>Verify any chatter in 3 quick steps.</h3></div>
-<div class="verify-fast-badge">STREAMER / MOD</div>
-</div>
-<div class="verify-fast-flow">
-<article class="verify-fast-step">
-<div class="verify-fast-icon">1</div>
-<div><span class="verify-role">STREAMER / MOD</span><h4>Select the viewer</h4><p>In <strong>Recent KICK Chat</strong>, click <strong>Verify</strong> beside the person.</p></div>
-</article>
-<div class="verify-arrow" aria-hidden="true">→</div>
-<article class="verify-fast-step">
-<div class="verify-fast-icon">2</div>
-<div><span class="verify-role">STREAMSHIELD</span><h4>Auto-send the link</h4><p>StreamShield temporarily locks that account and automatically replies to the selected viewer in <strong>KICK chat</strong> with the @username + one-time verification link.</p></div>
-</article>
-<div class="verify-arrow" aria-hidden="true">→</div>
-<article class="verify-fast-step">
-<div class="verify-fast-icon">3</div>
-<div><span class="verify-role">VIEWER</span><h4>Continue with KICK</h4><p>The viewer opens the link and signs in with the selected KICK account. A clean result can restore chat automatically.</p></div>
-</article>
-</div>
-<div class="verify-message-bar">
-<div><span class="verify-role">WHAT STREAMSHIELD POSTS AUTOMATICALLY</span><strong>@username — StreamShield verification is required. Open this one-time link and select Continue with KICK: [link]</strong></div>
-</div>
-<div class="verify-fast-note"><strong>That’s it.</strong> The verification message is a public KICK chat reply, not a private DM. If KICK cannot post it automatically, StreamShield copies the same ready-made message as a fallback. If the wrong KICK account opens the link, verification is rejected.</div>
-</div>
-<div class="ip-flow" aria-label="How StreamShield IP Ban works">
-<article class="ip-step"><span class="ip-step-number">1</span><div><h3>Viewer verifies</h3><p>The viewer selects <strong>Continue with KICK</strong>. StreamShield converts the connection into a keyed one-way network identifier for exact matching. The full IP address is discarded and is never shown to the streamer or moderators.</p></div></article>
-<article class="ip-step"><span class="ip-step-number">2</span><div><h3>You permanently ban them</h3><p>Use <strong>Permanent Ban</strong> from StreamShield. If that account has a verified connection, StreamShield can add that exact network identity to your blocked-network history.</p></div></article>
-<article class="ip-step"><span class="ip-step-number">3</span><div><h3>They return on another account</h3><p>If a new KICK account later completes verification from the <strong>same exact blocked network identity</strong>, StreamShield recognizes the match.</p></div></article>
-<article class="ip-step"><span class="ip-step-number">4</span><div><h3>Flag it — or auto-ban</h3><p>StreamShield can surface the match for moderator review. With <strong>exact-network auto-ban</strong> enabled, the newly verified matching account can be banned automatically.</p></div></article>
-</div>
-<div class="ip-ban-actions">
-<div><strong>Need to reverse it?</strong><span> Use <strong>UN-IP BAN</strong> to remove the network block. KICK account bans and StreamShield network blocks are separate controls.</span></div>
-</div>
-<p class="mini ip-note"><strong>Important:</strong> KICK does not provide viewer IP addresses to StreamShield. During StreamShield verification, the connection address is processed only to create the one-way network identifier and is then discarded. Shared, mobile, VPN, or reassigned IPs can create false matches, so automatic exact-match bans are optional.</p>
-</section>
-<section id="install" class="section card" aria-labelledby="install-title">
-<div class="eyebrow">Start here</div><h2 id="install-title">Four steps to your first check.</h2>
-<ol class="steps">
-<li><div><strong>Download Beta 12 and choose Extract All.</strong><p>In Windows File Explorer, right-click the downloaded ZIP and select <strong>Extract All</strong>. Open the extracted folder before running anything.</p></div></li>
-<li><div><strong>Run Install StreamShield.cmd.</strong><p>Double-click <strong>Install StreamShield.cmd</strong> in that folder and let installation finish. Launch StreamShield using the shortcut the installer creates.</p></div></li>
-<li><div><strong>Select Connect KICK.</strong><p>Review the permissions on KICK’s official authorization page and approve the connection. Return to StreamShield after authorization completes.</p></div></li>
-<li><div><strong>Run the Pre-Stream Check.</strong><p>Read the result for each check and resolve any connection or monitoring problem. Keep StreamShield running during your stream; live-only checks need a real live stream and real events.</p></div></li>
-</ol>
-<p class="mini">Already using an earlier beta? Close it before running the Beta 12 installer. <strong>Reconnect KICK once after updating</strong> so you can approve the new chat-message permission used to send verification replies automatically, then rerun the Pre-Stream Check.</p>
-<div class="notice"><p><strong>Windows publisher notice:</strong> this beta is not yet commercially code signed. If Windows blocks installation, leave system security protections enabled and contact the person who supplied your beta access.</p></div>
-<details class="release-details"><summary>Download details and release verification</summary><p class="mini">File: <span class="code">StreamShield-Protection-0.6.0-beta.12-Windows.zip</span><br>Version: <strong>0.6.0-beta.12</strong></p><p class="mini">SHA-256: <span class="code" id="release-sha256">2e9d0e557cf2b37e6a27ff834b621b5ddb6857be4af000b0f12af47b2d6e1292</span></p><p><a href="/release.json">View release metadata</a></p></details>
-</section>
-<section id="use" class="section card" aria-labelledby="use-title"><div class="eyebrow">While you stream</div><h2 id="use-title">A practical routine.</h2>
-<ul class="list">
-<li><strong>Open Compact Control.</strong> Keep the small window beside your stream tools and use the full dashboard when you need deeper history.</li>
-<li><strong>Review the reason for an alert.</strong> Raids, promotions, and sudden audience growth can be legitimate. Use the Event Board and a viewer’s Case File before escalating moderation.</li>
-<li><strong>Choose your automation settings.</strong> Automatic user timeouts are a separate opt-in. Mark known regulars as trusted and review the protections you enable.</li>
-<li><strong>Select suspicious chatters for verification.</strong> In Recent KICK Chat, use <strong>Require Verification</strong> beside the specific account. StreamShield temporarily restricts that account and automatically replies to that viewer in KICK chat with the one-time verification link. If KICK cannot post the reply, StreamShield copies the ready-made message as a fallback.</li>
-<li><strong>Correct mistakes using the right control.</strong> Recovery Center can reverse supported recent actions. Manage network blocks with UN-IP BAN and KICK account bans with the account unban control.</li>
-<li><strong>Review the report after an incident.</strong> Keep useful evidence for channel moderation or a KICK support request. A report’s evidence seal helps detect file changes; it does not prove the underlying accusation.</li>
-</ul></section>
-<section class="section grid two" aria-label="Status and network protection guidance">
-<div class="card"><div class="eyebrow">Health guide</div><h2>Read each check.</h2><p><span class="status">READY</span> The checks shown in the app have passed.</p><p><span class="status warning">PENDING / DEGRADED</span> An event, live signal, connection, or required service still needs attention.</p><p><span class="status error">SUSPICIOUS ACTIVITY</span> Review the activity and reasons before taking action.</p><p class="mini">A healthy connection confirms monitoring availability. It does not guarantee that every abusive action will be detected or stopped.</p></div>
-<div class="card"><div class="eyebrow">Optional network protection</div><h2>Exact matches need context.</h2><p>Only people who use StreamShield’s verification flow can provide a verified connection record. KICK does not supply viewer IPs to StreamShield.</p><p>Public IP addresses can be shared or reassigned. With the separate exact-match auto-ban setting enabled, a newly verified account matching a blocked network identity can be banned. Review possible false positives.</p><p>Targeted verification also uses a random first-party browser token. A token match is a moderator review signal by default; it is not a permanent device identity.</p></div>
-</section>
-<section id="branding" class="section" aria-labelledby="branding-title"><div class="eyebrow">For your OBS scenes</div><h2 id="branding-title">StreamShield branding, ready to download.</h2><p class="mini">These transparent PNGs are also included in the Windows download’s <strong>Streamer Branding</strong> folder. In OBS, add an <strong>Image</strong> source, select a PNG, resize without changing its proportions, and lock the source.</p>
-<div class="grid brand-grid">
-<article class="card"><img class="brand-image" src="/assets/brand/streamshield-shield-badge.png" width="297" height="265" loading="lazy" alt="Green and silver StreamShield shield badge"><h3>Shield badge</h3><p>For a small corner placement.</p><a class="button secondary small" href="/assets/brand/streamshield-shield-badge.png" download>Download badge PNG</a></article>
-<article class="card"><img class="brand-image" src="/assets/brand/streamshield-horizontal-overlay.png" width="371" height="157" loading="lazy" alt="Horizontal StreamShield logo"><h3>Horizontal logo</h3><p>For a branded panel or lower third.</p><a class="button secondary small" href="/assets/brand/streamshield-horizontal-overlay.png" download>Download horizontal PNG</a></article>
-<article class="card"><img class="brand-image" src="/assets/brand/streamshield-full-overlay.png" width="641" height="525" loading="lazy" alt="Full StreamShield logo"><h3>Full logo</h3><p>For starting and ending scenes.</p><a class="button secondary small" href="/assets/brand/streamshield-full-overlay.png" download>Download full logo PNG</a></article>
-</div><p class="mini">Static branding does not display live protection status. For live status, use the app’s optional OBS Browser Source and keep its private keyed URL confidential. <a href="/assets/brand/streamshield-brand-kit-preview.png">View the brand preview</a>.</p></section>
-<section id="troubleshooting" class="section card" aria-labelledby="troubleshooting-title"><div class="eyebrow">Troubleshooting</div><h2 id="troubleshooting-title">If a check does not pass.</h2><ul class="list"><li><strong>KICK is disconnected:</strong> reopen StreamShield, select Connect KICK, and complete authorization again.</li><li><strong>Monitoring is degraded:</strong> read the specific failed check and Event Board message. Confirm your internet connection, then rerun the check.</li><li><strong>Live monitoring is pending:</strong> keep the app open during your next normal stream. Offline channels may have no viewer count or recent live events.</li><li><strong>A viewer cannot verify:</strong> after clicking Require Verification, StreamShield normally replies automatically to that viewer’s KICK message with the newest one-time link. If KICK cannot post it, StreamShield copies the ready-made fallback message. The viewer must continue with the exact KICK account selected by the request; another account is rejected. If the request expired or was released, create a new request.</li><li><strong>A moderation mistake happened:</strong> use Recovery Center or the specific account/network control, then confirm the updated status.</li></ul></section>
-<section class="section card tint"><div class="eyebrow">Privacy by scope</div><h2>Know what is stored.</h2><p>Streamer OAuth tokens are encrypted on the streamer’s PC. The cloud broker processes authorization and refresh data transiently. Buffered public chat text expires after 15 minutes and event rows after 24 hours. Optional viewer verification adds a keyed one-way network identifier, not a stored full IP address; targeted verification can also add a hashed random browser token, with a cookie lifetime of up to 90 days.</p><p><a href="/privacy">Read Privacy &amp; Data Controls</a> · <a href="/terms">Read Terms &amp; Safe Use</a></p></section>
-</main>
-<footer class="site-footer">StreamShield Protection · Windows 0.6.0-beta.12 · Defensive use only.<br>KICK controls platform enforcement, monetization, and Partner Program decisions. StreamShield is not a KICK service.<div class="footer-links"><a href="/mods">Moderator Guide</a><a href="/beta">Beta testing &amp; feedback</a><a href="/privacy">Privacy</a><a href="/terms">Terms &amp; Safe Use</a><a href="#install">Installation</a></div></footer>
-</div>
-</body>
-</html>
+<section class="hero"><img class="hero-logo" src="/assets/brand/streamshield-shield-badge.png" width="104" height="93" alt="StreamShield shield"><span class="badge">QUIET SHIELD · WINDOWS BETA 14</span><h1>Your stream. Your community.<br>Fewer moderation headaches.</h1><p class="lead">StreamShield brings live KICK monitoring, targeted chat verification, repeat-abuse checks, and moderator controls into one place—so you can spend more time streaming and less time handling disruption.</p><div class="actions"><a class="button" href="/releases/StreamShield-Protection-0.6.0-beta.14-Windows.zip" download>Download Windows Beta 14</a><a class="button secondary" href="/how-it-works">See how it works</a></div><p class="mini">Connect your KICK channel · Choose your protection settings · Keep StreamShield running while you stream</p></section>
+<section class="section" id="features"><div class="eyebrow">One workspace for your moderation team</div><h2>Spot the problem. Choose the action. Keep the context.</h2><div class="grid">
+<article class="card tint"><h3>Live activity monitoring</h3><p>Follow sudden changes in chat, follows, and viewer activity. See the patterns that triggered an alert alongside recent channel events.</p></article>
+<article class="card"><h3>Chat and link shields</h3><p>Use your authorized KICK moderation connection to remove qualifying repetitive spam and suspicious links. Targeted automatic timeouts are a separate setting you control.</p></article>
+<article class="card"><h3>Verify / Resend</h3><p>Ask a selected chatter to complete a short KICK account check. StreamShield creates the request, applies its temporary chat restriction, and posts the account-bound link for you.</p></article>
+<article class="card"><h3>Ban &amp; Shield</h3><p>Ban the account and check its retained verified network history in the same workflow. Keep possible repeat-abuse matches and the supporting history in the moderator dashboard.</p></article>
+<article class="card"><h3>Tools for your team</h3><p>Use the full dashboard or Compact Control. Invite selected moderators to a restricted web dashboard with recent chat, verification, moderation actions, and case files.</p></article>
+<article class="card"><h3>A clear incident record</h3><p>Review what StreamShield observed, when an alert appeared, and which actions were taken. Export stream and incident reports for follow-up, with an integrity check for the saved report.</p></article></div></section>
+<section class="section card tint" id="how-it-works"><div class="eyebrow">The everyday workflow</div><h2>Connect. Watch. Respond.</h2><ol class="steps">
+<li><div><strong>Connect your channel.</strong><p>Install the Windows app and approve the requested permissions on KICK’s own authorization page.</p></div></li>
+<li><div><strong>Choose the controls you want.</strong><p>Run Pre-Stream Check. Enable the shields that fit your channel and choose the recommended review-first Network Shield preset.</p></div></li>
+<li><div><strong>Keep streaming.</strong><p>StreamShield receives channel events while the desktop app stays open. Use the compact window to review alerts and act on a specific message or account.</p></div></li>
+<li><div><strong>Review and follow up.</strong><p>Check verification results, handle possible repeat abuse, correct mistakes with the appropriate recovery control, and review the stream report afterward.</p></div></li></ol><a class="button secondary" href="/how-it-works">Walk through the full process</a></section>
+<section class="section card" id="ip-ban"><div class="eyebrow">Network Shield</div><h2>Make repeat abuse easier to review.</h2><p class="leadSmall">Bring a viewer’s consented verification history into the moderation decision—without making your team manage raw IP addresses.</p><div class="grid two"><article><h3>A quieter check for viewers</h3><p>The viewer receives a neutral “Please verify to chat” message and opens a StreamShield page. After reviewing the privacy notice, they continue with the KICK account selected by the request.</p><p>A clean result can restore the temporary restriction StreamShield owns. A result that needs review stays with the moderation team.</p></article><article><h3>A clearer decision for moderators</h3><p>With Network Shield enabled, banning a previously verified account lets the signed ban event mark its retained network history. A later verification from a blocked network becomes a possible repeat-abuse signal.</p><p><strong>Review-first is recommended:</strong> shared or changing connections can link unrelated viewers. Account bans, network blocks, and their recovery controls stay separate.</p></article></div><p class="mini">Network checks apply to viewers who complete StreamShield verification. This is channel chat moderation, not a KICK-wide network block.</p></section>
+<section class="section" id="install"><div class="eyebrow">Start here</div><h2>Set up before your next stream.</h2><ol class="steps"><li><div><strong>Download and extract.</strong><p>Save the Windows ZIP, right-click it, and choose <strong>Extract All</strong>.</p></div></li><li><div><strong>Run the installer.</strong><p>Open <strong>Install StreamShield.cmd</strong>, then launch StreamShield from the desktop shortcut.</p></div></li><li><div><strong>Sign in and check readiness.</strong><p>Select <strong>Connect KICK</strong>, choose your protection settings, and run <strong>Pre-Stream Check</strong>. Keep the app open while your channel is being moderated.</p></div></li></ol><div class="actions"><a class="button" href="/releases/StreamShield-Protection-0.6.0-beta.14-Windows.zip" download>Download Windows Beta 14</a><a class="button secondary" href="/update">Updating an existing installation?</a></div><p class="mini">Version 0.6.0-beta.14 · Windows desktop app · SHA-256: <code id="release-sha256">936a482919ecd3147d828c7946fbc0ac449b91ae1d872de7d79804ef8cd673b0</code></p></section>
+<section class="section card" id="branding"><div class="eyebrow">For your stream layout</div><h2>Make StreamShield part of your setup.</h2><p>The Windows package includes ready-to-use OBS artwork. Add a PNG as an Image source, position it in your scene, and keep the moderation window beside your streaming tools.</p><div class="grid brand-grid"><article class="card"><img class="brand-image" src="/assets/brand/streamshield-shield-badge.png" width="297" height="265" loading="lazy" alt="StreamShield shield badge"><h3>Shield badge</h3><a class="button secondary small" href="/assets/brand/streamshield-shield-badge.png" download>Get badge PNG</a></article><article class="card"><img class="brand-image" src="/assets/brand/streamshield-horizontal-overlay.png" width="371" height="157" loading="lazy" alt="StreamShield horizontal logo"><h3>Horizontal logo</h3><a class="button secondary small" href="/assets/brand/streamshield-horizontal-overlay.png" download>Get horizontal PNG</a></article><article class="card"><img class="brand-image" src="/assets/brand/streamshield-full-overlay.png" width="641" height="525" loading="lazy" alt="StreamShield full logo"><h3>Full logo</h3><a class="button secondary small" href="/assets/brand/streamshield-full-overlay.png" download>Get full logo PNG</a></article></div><p class="mini">Artwork is decorative. Use the app’s optional private OBS Browser Source for live status, and keep its keyed URL private.</p></section>
+<section class="section card tint"><div class="eyebrow">Built with clear data controls</div><h2>Privacy-protected verification.</h2><p>Viewers see what the verification check uses before continuing. Moderators work with masked network identifiers and relevant case history. The full data-handling explanation is available in <a href="/privacy">Privacy &amp; data controls</a>.</p><p>Start with review-first settings, test with an account whose owner agrees, and use the <a href="/beta#feedback">feedback form</a> to help improve the beta.</p></section></main>
+<footer class="site-footer">StreamShield Protection · Windows 0.6.0-beta.14 · Built for KICK communities.<br>Independent software, not affiliated with KICK. Beta release.<div class="footer-links"><a href="/how-it-works">How it works</a><a href="/mods">Moderator guide</a><a href="/update">Updates</a><a href="/beta#feedback">Feedback</a><a href="/privacy">Privacy &amp; data controls</a><a href="/terms">Terms</a></div></footer></div></body></html>

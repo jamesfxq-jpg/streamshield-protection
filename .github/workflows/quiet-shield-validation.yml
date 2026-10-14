@@ -1,0 +1,167 @@
+name: Quiet Shield isolated validation
+
+on:
+  push:
+    branches: ['streamshield/quiet-shield-beta13']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quiet-shield-candidate
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      applied: ${{ steps.prepare.outputs.applied }}
+      tree: ${{ steps.archive.outputs.tree }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.3'
+      - name: Apply exact checksum-verified source changes
+        id: prepare
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64, hashlib, json, lzma, os
+          from pathlib import Path
+          root = Path.cwd()
+          stage = root / '.github/quiet-shield-stage'
+          applied = stage.exists()
+          if applied:
+              parts = sorted(stage.glob('part*.b64'))
+              assert [p.name for p in parts] == ['part1.b64','part2.b64','part3.b64','part4.b64']
+              encoded = ''.join(p.read_text().strip() for p in parts)
+              raw = lzma.decompress(base64.b64decode(encoded, validate=True))
+              assert hashlib.sha256(raw).hexdigest() == '786c08e70b5de6ebc6ef981b92ee521a88ccf6a92bb1f733fa0e646009f7c4f2'
+              capsule = json.loads(raw)
+              assert capsule['format'] == 1 and len(capsule['files']) == 21
+              seen = set()
+              for item in capsule['files']:
+                  rel = Path(item['path'])
+                  assert not rel.is_absolute() and '..' not in rel.parts and '.git' not in rel.parts and '.github' not in rel.parts
+                  assert str(rel) not in seen
+                  seen.add(str(rel))
+                  target = root / rel
+                  assert not target.is_symlink()
+                  old = target.read_bytes() if target.exists() else b''
+                  if item['base'] is None:
+                      assert not target.exists(), rel
+                  else:
+                      assert hashlib.sha256(old).hexdigest() == item['base'], rel
+                  previous = 0
+                  for start, end, text in item['edits']:
+                      assert type(start) is int and type(end) is int and previous <= start <= end <= len(old)
+                      assert isinstance(text, str)
+                      previous = end
+                  new = old
+                  for start, end, text in reversed(item['edits']):
+                      new = new[:start] + text.encode('utf-8') + new[end:]
+                  assert hashlib.sha256(new).hexdigest() == item['result'], rel
+                  target.parent.mkdir(parents=True, exist_ok=True)
+                  target.write_bytes(new)
+                  print('Verified source:', rel)
+              for p in parts:
+                  p.unlink()
+              stage.rmdir()
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+              out.write('applied=' + str(applied).lower() + '\n')
+          PY
+      - name: Run isolated regression fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          node tests/compact-fixtures.mjs
+          node tests/health-ui-fixtures.mjs
+          node tests/runtime.mjs
+          node tests/moderation-regression.mjs
+          node tests/backend-consent.test.mjs
+          node tests/quiet-shield.test.mjs
+      - name: Build deterministic Windows candidate and capture tested tree
+        id: archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          python tools/package_release.py
+          git diff --check
+          git add -A
+          tree=$(git write-tree)
+          echo "tree=$tree" >> "$GITHUB_OUTPUT"
+          git archive --format=zip --output="$RUNNER_TEMP/streamshield-source.zip" "$tree"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: streamshield-quiet-shield-candidate
+          path: ${{ runner.temp }}/streamshield-source.zip
+          retention-days: 14
+  windows:
+    needs: validate
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: streamshield-quiet-shield-candidate
+          path: ${{ runner.temp }}/candidate
+      - name: Install and reinstall exact candidate without KICK access
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Expand-Archive -LiteralPath "$env:RUNNER_TEMP/candidate/streamshield-source.zip" -DestinationPath $env:GITHUB_WORKSPACE -Force
+          Set-Location $env:GITHUB_WORKSPACE
+          $manifest = Get-Content './release.json' -Raw | ConvertFrom-Json
+          $zip = Join-Path $env:GITHUB_WORKSPACE ('releases/' + $manifest.filename)
+          ./tests/windows-beta-smoke.ps1 -LocalZipPath $zip
+  save-validated-branch:
+    if: needs.validate.outputs.applied == 'true'
+    needs: [validate, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: streamshield-quiet-shield-candidate
+          path: ${{ runner.temp }}/candidate
+      - name: Save only the tested tree to the existing development branch
+        env:
+          EXPECTED_TREE: ${{ needs.validate.outputs.tree }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os, zipfile
+          from pathlib import Path
+          archive = Path(os.environ['RUNNER_TEMP']) / 'candidate/streamshield-source.zip'
+          with zipfile.ZipFile(archive) as z:
+              for info in z.infolist():
+                  p = Path(info.filename)
+                  assert not p.is_absolute() and '..' not in p.parts and '.git' not in p.parts
+                  assert (info.external_attr >> 16) & 0o170000 != 0o120000
+              z.extractall('.')
+          stage = Path('.github/quiet-shield-stage')
+          if stage.exists():
+              for p in stage.glob('part*.b64'):
+                  p.unlink()
+              stage.rmdir()
+          PY
+          git add -A
+          test "$(git write-tree)" = "$EXPECTED_TREE"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Implement Quiet Shield Beta 13 after isolated and Windows candidate tests'
+          git push origin HEAD:refs/heads/streamshield/quiet-shield-beta13

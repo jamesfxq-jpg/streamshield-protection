@@ -4,3 +4,5 @@ desktop/app/.env.local
 desktop/runtime/
 __pycache__/
 *.pyc
+
+/site-checks/

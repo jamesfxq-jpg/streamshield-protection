@@ -8,7 +8,7 @@
   const connect=document.getElementById("mod-connect");
   const fail=(message)=>{status.textContent=message;status.classList.add("error");details.hidden=true;};
   if(!/^[A-Za-z0-9_-]{32,128}$/.test(invite)){fail("This moderator invite is invalid. Ask the streamer for a new invite.");return;}
-  fetch(BACKEND+"/moderator/invite-info?invite="+encodeURIComponent(invite),{headers:{accept:"application/json"},cache:"no-store"})
+  fetch(BACKEND+"/moderator/invite-info?invite="+encodeURIComponent(invite),{headers:{accept:"application/json","x-streamshield-client-version":"0.6.0-beta.14"},cache:"no-store"})
     .then(async r=>({ok:r.ok,data:await r.json().catch(()=>({}))}))
     .then(({ok,data})=>{
       if(!ok) throw new Error("This moderator invite has expired or was revoked.");
@@ -17,7 +17,7 @@
       status.textContent="Invite verified";
       status.classList.remove("error");
       copy.textContent="You were selected to help moderate "+channel+" as "+username+".";
-      connect.href=BACKEND+"/moderator/start?invite="+encodeURIComponent(invite);
+      connect.href=BACKEND+"/moderator/start?invite="+encodeURIComponent(invite)+"&client_version=0.6.0-beta.14";
       details.hidden=false;
     })
     .catch(e=>fail(e.message||"Could not verify this moderator invite."));

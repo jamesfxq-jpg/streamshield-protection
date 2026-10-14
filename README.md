@@ -1,3 +1,5 @@
+> **Beta 14 rollout status:** source and package preparation, not proof of deployment. The matching backend migration/function and website must be published and checked before activating required sign-out. See `docs/beta14-required-update.md`.
+
 # StreamShield Protection
 
 **0.6.0-beta.12** — a Windows desktop application for monitoring and moderating a connected KICK channel, with a public download site and a cloud OAuth/webhook service.
@@ -112,3 +114,42 @@ Beta 11 no longer persists encrypted full viewer IP addresses. Verification uses
 Beta 12 adds KICK's documented `chat:write` permission. After **Require Verification** successfully creates the one-time request and applies the temporary chat restriction, StreamShield automatically posts the verification message into KICK chat and replies to the selected chatter's message when a message ID is available. The post uses the connected broadcaster's user authorization. If KICK refuses or cannot send the message, StreamShield keeps the verification request active and copies the ready-made message as a manual fallback.
 
 Existing installations should reconnect KICK once after updating to Beta 12 so the new chat permission can be approved.
+
+### Beta 13 — Quiet Shield
+
+The Beta 13 update is prepared on `streamshield/quiet-shield-beta13`. Its Windows
+package and hosted UI changes must be released together; branch build results
+are not proof that the production website or live KICK OAuth has been tested.
+
+- **Network Shield** replaces the old one-click Full Protection setup with a
+  review-first preset. Installing does not silently overwrite existing settings;
+  choosing the preset disables automatic exact-network bans explicitly.
+- **Ban & Shield** combines account moderation with a private, bounded check of
+  retained verified history. It distinguishes disabled protection, unavailable
+  history, no retained match, pending synchronization and confirmed blocks.
+  Existing signed KICK ban events still perform network marking asynchronously.
+- **Verify / Resend** uses the same still-pending, account-bound request and its
+  original expiry. Successful automatic chat posts are limited to one per link
+  per minute. Expired/completed/reviewed/missing requests fail closed. The resend
+  cache is session-scoped, bounded and in memory only.
+- **Remove Network Block** is the former UN-IP BAN action, with clearer wording.
+  It still does not undo KICK account bans. Network settings and unblock actions
+  are serialized against automatic queue enforcement. Current opt-in and
+  retained blocked history are rechecked before an automatic network ban.
+- Full, compact and hosted moderator UIs suppress duplicate in-flight actions.
+  Successful actions use private inline notices rather than blocking popups.
+- The hosted viewer page explains network identifiers and first-party browser
+  tokens visibly. No covert tracking, raw IP storage, extra KICK OAuth scope,
+  device fingerprinting or database migration was introduced.
+
+Additional regression entry point: `node tests/quiet-shield.test.mjs`.
+The optional Windows test argument `-LocalZipPath <candidate.zip>` tests a
+checksum-verified local candidate rather than asserting it is already published.
+
+### Beta 14 — clear onboarding and required-update support
+
+The homepage, How it works page, moderator guide, beta-feedback page and update page now explain the end-to-end workflow, with privacy disclosures retained in the relevant places. Current desktop, web and package version strings agree.
+
+The new dormant cloud policy separates minimum-client-version compatibility from authentication. Signed OAuth state/tickets and installation/moderator epochs require fresh sign-in after activation. Legacy local credentials are expired on first Beta 14 launch without deleting saved channel settings, ban holds, verification ownership or reports. Supported desktop clients check authorization with a short lease before using cached KICK credentials; unavailable checks fail closed without erasing credentials.
+
+Additional regression commands: `node tests/required-update.test.mjs`, `python tests/site-content.py`, and `python tests/site-browser.py` (Playwright required). The publication/activation order and current acceptance gaps are in `docs/beta14-required-update.md`. Client-reported version/check-in metadata are not binary attestation or proof that an offline installation updated.

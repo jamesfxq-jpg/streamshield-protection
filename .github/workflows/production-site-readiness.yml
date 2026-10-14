@@ -1,0 +1,79 @@
+name: Published website readiness
+on:
+  push:
+    branches: [main]
+    paths:
+      - '*.html'
+      - 'assets/**'
+      - 'releases/**'
+      - 'release.json'
+      - '.github/workflows/production-site-readiness.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-website:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check production pages and Windows ZIP without signing in
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, json, time, urllib.request, urllib.error
+          from pathlib import Path
+          from datetime import datetime, timezone
+          BASE='https://streamshield-protection-public.vercel.app'
+          EXPECTED='936a482919ecd3147d828c7946fbc0ac449b91ae1d872de7d79804ef8cd673b0'
+          VERSION='0.6.0-beta.14'
+          FILENAME='StreamShield-Protection-0.6.0-beta.14-Windows.zip'
+          results=[]
+          def get(path, limit=5_000_000):
+              req=urllib.request.Request(BASE+path,headers={'Accept':'*/*','Cache-Control':'no-cache'})
+              with urllib.request.urlopen(req,timeout=15) as r:
+                  assert r.status==200, (path,r.status)
+                  from urllib.parse import urlsplit
+                  assert urlsplit(r.url).hostname=='streamshield-protection-public.vercel.app', 'Unexpected download or page host'
+                  content=r.read(limit+1)
+                  assert len(content)<=limit, 'Response exceeded expected bound'
+                  return content,dict(r.headers)
+          try:
+              deadline=time.monotonic()+150
+              while True:
+                  try:
+                      raw,headers=get('/release.json?readiness='+str(time.time_ns()),100_000)
+                      manifest=json.loads(raw)
+                      if manifest.get('version')==VERSION and manifest.get('sha256')==EXPECTED:
+                          break
+                      raise AssertionError('Expected release is not published yet')
+                  except (urllib.error.URLError,AssertionError,ValueError) as e:
+                      if time.monotonic()>=deadline: raise
+                      print('Waiting for normal production deployment:',type(e).__name__,flush=True)
+                      time.sleep(10)
+              assert manifest.get('filename')==FILENAME and manifest.get('size_bytes')==2733835, 'Unexpected release metadata'
+              for path,expected in [('/', 'Fewer moderation headaches.'),('/how-it-works','How'),('/update','update'),('/verify','Continue with KICK'),('/mods','moderator'),('/beta','feedback'),('/privacy','Privacy')]:
+                  raw,headers=get(path,250_000)
+                  page=raw.decode('utf-8')
+                  assert expected.lower() in page.lower(), (path,'Expected page copy missing')
+                  assert 'text/html' in headers.get('Content-Type',headers.get('content-type','')).lower(), (path,'Content type')
+                  assert 'Content-Security-Policy' in headers or 'content-security-policy' in headers, (path,'CSP missing')
+                  results.append({'path':path,'status':200,'expected_copy':True,'security_header':True})
+                  print('PASS:',path,flush=True)
+              raw,_=get('/releases/'+FILENAME)
+              digest=hashlib.sha256(raw).hexdigest()
+              assert len(raw)==2733835 and digest==EXPECTED, 'Published ZIP does not match tested candidate'
+              results.append({'download':FILENAME,'size_bytes':len(raw),'sha256':digest,'verified':True})
+              results.append({'checks_passed':True,'real_account_used':False,'global_signout_activated':False})
+              print('PASS: Production website and exact Windows download. No account login or moderation performed.')
+          except Exception as e:
+              results.append({'checks_passed':False,'error_type':type(e).__name__,'message':str(e)[:300]})
+              raise
+          finally:
+              Path('site-readiness.json').write_text(json.dumps({'checked_at':datetime.now(timezone.utc).isoformat(),'results':results},indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: streamshield-public-site-readiness
+          path: site-readiness.json
+          retention-days: 14

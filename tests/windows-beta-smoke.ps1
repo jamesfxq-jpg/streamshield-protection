@@ -4,7 +4,7 @@ Exercise the unchanged, published Windows ZIP in a disposable profile.
 No KICK login, viewer verification, or live moderation is performed.
 #>
 [CmdletBinding()]
-param()
+param([string]$LocalZipPath = "")
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 if (-not $IsWindows) { throw 'This smoke test requires Windows.' }
@@ -33,6 +33,7 @@ $overrideNames = @('LOCALAPPDATA','USERPROFILE','TEMP','TMP','DATA_DIR','PORT','
 $savedEnv = @{}
 foreach ($name in $overrideNames) { $savedEnv[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 $success = $false
+$sourceLabel = if ($LocalZipPath) { 'local candidate' } else { 'published release' }
 
 function Stop-TestServer {
     # Never kill other node.exe instances or use the user's own stop/uninstall tools.
@@ -76,9 +77,13 @@ try {
     $listener = @(Get-NetTCPConnection -LocalPort 8787 -State Listen -ErrorAction SilentlyContinue)
     Assert-Check ($listener.Count -eq 0) 'Port 8787 is unused before installation.'
     $zipPath = Join-Path $work 'release.zip'
-    Invoke-WebRequest -Uri $uri -OutFile $zipPath -MaximumRedirection 0 -TimeoutSec 90
-    Assert-Check ((Get-Item $zipPath).Length -eq $manifest.size_bytes) 'Downloaded ZIP length matches the committed manifest.'
-    Assert-Check ((Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant() -eq $manifest.sha256) 'Downloaded ZIP SHA-256 matches the committed manifest.'
+    if ($LocalZipPath) {
+        Copy-Item -LiteralPath $LocalZipPath -Destination $zipPath
+    } else {
+        Invoke-WebRequest -Uri $uri -OutFile $zipPath -MaximumRedirection 0 -TimeoutSec 90
+    }
+    Assert-Check ((Get-Item $zipPath).Length -eq $manifest.size_bytes) "$sourceLabel ZIP length matches the committed manifest."
+    Assert-Check ((Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant() -eq $manifest.sha256) "$sourceLabel ZIP SHA-256 matches the committed manifest."
     $archive = [IO.Compression.ZipFile]::OpenRead($zipPath)
     try {
         $names = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
@@ -135,12 +140,12 @@ try {
     Invoke-PublishedInstaller 'Reinstallation'
     Assert-Check ((Get-Content $marker -Raw) -eq $markerValue) 'Reinstallation preserves existing application data.'
     $success = $true
-    Write-Host "PASS: published $($manifest.version) installer and reinstallation smoke test on Windows."
+    Write-Host "PASS: $sourceLabel $($manifest.version) installer and reinstallation smoke test on Windows."
 } finally {
     Stop-TestServer
     foreach ($name in $overrideNames) { [Environment]::SetEnvironmentVariable($name, $savedEnv[$name], 'Process') }
     $result = if ($success) { 'PASS' } else { 'FAIL' }
-    $summary = "## Windows published-release smoke test: $result`n`nVersion: $($manifest.version)`n`nThe test uses a disposable profile and the unchanged, checksum-verified published ZIP. No KICK account, viewer OAuth, or live moderation is tested. Reinstallation only checks synthetic local-data preservation; it does not establish real-account migration correctness.`n"
+    $summary = "## Windows $sourceLabel smoke test: $result`n`nVersion: $($manifest.version)`n`nThe test uses a disposable profile and the unchanged, checksum-verified $sourceLabel ZIP. No KICK account, viewer OAuth, or live moderation is tested. Reinstallation only checks synthetic local-data preservation; it does not establish real-account migration correctness.`n"
     if ($env:GITHUB_STEP_SUMMARY) { Add-Content $env:GITHUB_STEP_SUMMARY $summary }
     Write-Host "Smoke-test workspace: $work"
 }

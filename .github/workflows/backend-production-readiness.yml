@@ -1,0 +1,83 @@
+name: Production backend readiness
+on:
+  push:
+    branches: [main, 'streamshield/required-update-beta14']
+    paths:
+      - '.github/workflows/backend-production-readiness.yml'
+      - 'supabase/functions/streamshield-backend/**'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backend-readiness:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify public health and unauthorized access without real accounts
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, secrets, urllib.request, urllib.error
+          from datetime import datetime, timezone
+          from pathlib import Path
+          BASE = 'https://blrdvuhnxtwnsphdxpkg.supabase.co/functions/v1/streamshield-backend'
+          VERSION = '0.6.0-beta.14'
+          results = []
+          def call(path, method='GET', version=None, body=None):
+              headers = {'Accept':'application/json'}
+              if version: headers['x-streamshield-client-version'] = version
+              data = None
+              if body is not None:
+                  data = json.dumps(body).encode()
+                  headers['Content-Type'] = 'application/json'
+              req = urllib.request.Request(BASE + path, data=data, headers=headers, method=method)
+              try:
+                  r = urllib.request.urlopen(req, timeout=25)
+              except urllib.error.HTTPError as e:
+                  r = e
+              status = r.code
+              payload = json.loads(r.read())
+              # Never log OAuth URLs, sealed state, headers or credentials.
+              row = {'path':path, 'method':method, 'status':status}
+              if payload.get('error'): row['error'] = payload['error']
+              results.append(row)
+              print(json.dumps(row))
+              return status, payload
+          try:
+              status, health = call('/health')
+              assert status == 200 and health.get('ok') and health.get('database'), 'health'
+              assert health.get('stores_raw_viewer_ips') is False, 'IP privacy'
+              status, policy = call('/client/policy')
+              assert status == 200 and type(policy.get('enforced')) is bool, 'policy'
+              assert policy.get('minimum_version') == VERSION and type(policy.get('auth_epoch')) is int, 'policy version'
+              enforced = policy['enforced']
+              results.append({'policy_enforced':enforced, 'auth_epoch':policy['auth_epoch'], 'minimum_version':policy['minimum_version']})
+              for path in ['/client/session?broadcaster_id=1', '/events?broadcaster_id=1', '/network/history?broadcaster_id=1', '/moderator/snapshot']:
+                  status, data = call(path, version=VERSION)
+                  assert status == 401, (path, status)
+              status, data = call('/events?broadcaster_id=1', version='0.6.0-beta.12')
+              assert status == (426 if enforced else 401), 'legacy gate'
+              status, data = call('/kick-webhook', 'POST', body={})
+              assert status == 400 and data.get('error') == 'missing_kick_headers', 'signed webhook guard'
+              status, data = call('/oauth/start', 'POST', version=VERSION, body={})
+              assert status == 400 and data.get('error') == 'invalid_local_callback', 'OAuth callback validation'
+              # Only create a short-lived OAuth authorize URL. Do not follow it, sign in,
+              # register a channel, issue a moderation command or use a real KICK account.
+              status, data = call('/oauth/start', 'POST', version=VERSION, body={'local_callback':'http://localhost:18897/auth/kick/handoff','install_key':secrets.token_urlsafe(36)})
+              assert status == 200 and data.get('ok'), 'OAuth start'
+              from urllib.parse import urlsplit, parse_qs
+              url = urlsplit(data['authorize_url'])
+              assert url.scheme == 'https' and url.netloc == 'id.kick.com' and url.path == '/oauth/authorize', 'OAuth destination'
+              query = parse_qs(url.query)
+              assert query.get('code_challenge_method') == ['S256'] and query.get('state'), 'PKCE/state'
+              results.append({'checks_passed':True,'real_account_used':False,'global_signout_activated':False})
+              print('PASS: Live backend health, compatibility policy, authorization boundaries, webhook guard and OAuth start. No account login or moderation performed.')
+          finally:
+              Path('readiness.json').write_text(json.dumps({'checked_at':datetime.now(timezone.utc).isoformat(),'results':results}, indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: streamshield-backend-readiness
+          path: readiness.json
+          retention-days: 14

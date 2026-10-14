@@ -1,4 +1,8 @@
 import http from "node:http";
+import { CLIENT_VERSION } from "./clientVersion.js";
+import { createClientSessionGuard, expireClientSession } from "./clientSession.js";
+import { getRemoteClientSession } from "./remoteBackend.js";
+import { summarizeBanShield, validateVerificationResult, createVerificationDeliveryCache } from "./quietShield.js";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFile, writeFile, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -48,6 +52,20 @@ const publicOauthBroker = remoteBackendConfigured && process.env.STREAMSHIELD_PU
 const kickConfigured = legacyKickConfigured || publicOauthBroker;
 const store = new RuntimeStore(dataDir);
 await store.init();
+if (publicOauthBroker) {
+    let changed=false;
+    for (const session of store.sessions.values()) {
+        if (!session.authClientVersion) {
+            expireClientSession(session,"StreamShield has been updated. Reconnect with KICK to start a fresh session; your saved settings and bans are retained.");
+            changed=true;
+        }
+    }
+    if(changed)await store.persistSessions();
+}
+const requireCurrentClientSession = createClientSessionGuard({
+    check: session => getRemoteClientSession(remoteBackendUrl,session.broadcasterId,session.remoteInstallKey),
+    expire: async (session,message) => {expireClientSession(session,message);await store.saveSession(session);broadcast(session);}
+});
 const oauthState = new Map();
 const sseBySession = new Map();
 const sseByOverlay = new Map();
@@ -56,6 +74,8 @@ const processingWebhookIds = new Set();
 const automatedTimeouts = new Map();
 const remoteRegisterAttempts = new Map();
 const userModerationTails = new Map();
+const networkPolicyTails = new Map();
+const verificationDeliveryCache = createVerificationDeliveryCache();
 function withUserModeration(session, userId, action) {
     const key = `${session.broadcasterId}:${userId}`;
     const previous = userModerationTails.get(key) || Promise.resolve();
@@ -67,6 +87,7 @@ function withUserModeration(session, userId, action) {
 }
 async function invalidateVerificationLocks(session, userId, outcome) {
     session.verificationLocks ||= {};
+    verificationDeliveryCache.forget(verificationCacheKey(session, userId));
     const requestIds = [];
     for (const [requestId, lockedUserId] of Object.entries(session.verificationLocks)) {
         if (Number(lockedUserId) === userId) {
@@ -83,13 +104,20 @@ async function invalidateVerificationLocks(session, userId, outcome) {
         }
     }
 }
-async function applyPermanentUserBan(session, userId, reason) {
+async function applyPermanentUserBan(session, userId, reason, guard) {
     return withUserModeration(session, userId, async () => {
+        let token;
+        if (guard) {
+            token = await ensureFreshToken(session);
+            if (!(await guard())) return false;
+        }
+        // Preserve moderator intent even if token refresh for an explicit ban fails.
         await invalidateVerificationLocks(session, userId, "permanent_ban_preserved");
-        await banKickUser(await ensureFreshToken(session), session.broadcasterId, userId, reason);
+        await banKickUser(token || await ensureFreshToken(session), session.broadcasterId, userId, reason);
         session.permanentBanHolds ||= {};
         session.permanentBanHolds[userId] = Date.now();
         await store.saveSession(session);
+        return true;
     });
 }
 async function applyUserTimeout(session, userId, minutes, reason) {
@@ -119,42 +147,80 @@ async function observePermanentUserBan(session, userId, createdAt) {
     // must see it before it can issue DELETE /moderation/bans.
     await invalidateVerificationLocks(session, userId, "observed_permanent_ban_preserved");
 }
+function verificationCacheKey(session, userId) {
+    return `${session.id || session.broadcasterId}:${userId}`;
+}
+function withNetworkPolicy(session, action) {
+    const key = String(session.broadcasterId);
+    const previous = networkPolicyTails.get(key) || Promise.resolve();
+    const next = previous.catch(() => {}).then(action);
+    networkPolicyTails.set(key, next);
+    return next.finally(() => { if (networkPolicyTails.get(key) === next) networkPolicyTails.delete(key); });
+}
+async function describeBanShield(session, userId) {
+    if (!session.networkProtection?.enabled) return summarizeBanShield(null, userId, { enabled: false });
+    try {
+        if (!remoteBackendConfigured || !session.remoteBackendRegistered || !session.remoteInstallKey) throw new Error("Cloud unavailable");
+        const history = await getRemoteNetworkHistory(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey);
+        return summarizeBanShield(history, userId, { enabled: true });
+    } catch {
+        // A failed history lookup must not misreport a successful KICK account ban.
+        return summarizeBanShield(null, userId, { enabled: true });
+    }
+}
 function verificationChatText(username, userId, verificationUrl) {
-    const mention = username ? "@" + String(username).replace(/^@/, "") : "KICK user " + userId;
-    return `${mention} — StreamShield verification is required. Open this one-time link and select Continue with KICK: ${verificationUrl}`;
+    const mention = username ? "@" + String(username).replace(/^@/, "").replace(/[\r\n\t]/g, "").slice(0, 100) : "KICK user " + userId;
+    return `${mention} — Please verify to chat: ${verificationUrl} · Continue with KICK.`;
 }
 async function postVerificationChatMessage(session, username, userId, verificationUrl, replyToMessageId = "") {
-    const content = verificationChatText(username, userId, verificationUrl);
-    const token = await ensureFreshToken(session);
-    const sent = await sendKickChatMessage(token, session.broadcasterId, content, replyToMessageId);
-    return { content, messageId: String(sent?.data?.message_id || sent?.message_id || "") };
+    return withUserModeration(session, userId, async () => {
+        const key = verificationCacheKey(session, userId);
+        const requestId = Object.keys(session.verificationLocks || {}).find(id => Number(session.verificationLocks[id]) === userId);
+        let cached = verificationDeliveryCache.get(key, requestId);
+        if (session.permanentBanHolds?.[userId] || !cached || cached.result.verification_url !== verificationUrl) throw new Error("The verification request is no longer active. Review the current moderation state.");
+        const content = verificationChatText(username, userId, verificationUrl);
+        if (cached.sentAt && Date.now() - cached.sentAt < 60_000) return { content, messageId: cached.sentMessageId, reused: true };
+        const token = await ensureFreshToken(session);
+        cached = verificationDeliveryCache.get(key, requestId);
+        if (session.permanentBanHolds?.[userId] || !cached || Number(session.verificationLocks?.[requestId]) !== userId) throw new Error("A newer moderation decision replaced verification. No message was sent.");
+        const sent = await sendKickChatMessage(token, session.broadcasterId, content, replyToMessageId);
+        const messageId = String(sent?.data?.message_id || sent?.message_id || "");
+        verificationDeliveryCache.markSent(key, requestId, messageId);
+        return { content, messageId, reused: false };
+    });
 }
 async function requestUserVerification(session, userId, username) {
     return withUserModeration(session, userId, async () => {
-        if (session.permanentBanHolds?.[userId])
-            throw new Error("A permanent ban is recorded for this account. Unban it explicitly before requiring verification.");
+        if (session.permanentBanHolds?.[userId]) throw new Error("This user has a recorded permanent ban. Unban deliberately before requesting verification.");
         session.verificationLocks ||= {};
-        if (Object.values(session.verificationLocks).some(value => Number(value) === userId))
-            throw new Error("This account already has a verification restriction. Release that request before creating another.");
+        const key = verificationCacheKey(session, userId);
+        const activeId = Object.keys(session.verificationLocks).find(id => Number(session.verificationLocks[id]) === userId);
+        if (activeId) {
+            const cached = verificationDeliveryCache.get(key, activeId);
+            if (cached) {
+                const recent = await getRemoteVerificationRecent(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey);
+                const rows = Array.isArray(recent) ? recent : (recent?.items || recent?.requests || []);
+                const fresh = rows.find(row => String(row.id || row.request_id) === activeId && Number(row.kick_user_id) === userId && row.status === "pending");
+                if (fresh && !session.permanentBanHolds?.[userId] && Number(session.verificationLocks[activeId]) === userId && verificationDeliveryCache.get(key, activeId)) return { ...cached.result, reused: true };
+            }
+            throw new Error("This user already has a verification restriction. Reuse the active link in chat or review its status before replacing it. No additional restriction was applied.");
+        }
         const token = await ensureFreshToken(session);
-        // Create and validate the challenge before imposing a seven-day timeout.
-        // Cloud creation failures therefore cannot strand the viewer without a link.
+        if (session.permanentBanHolds?.[userId]) throw new Error("A permanent ban replaced this request. No verification restriction was applied.");
         const result = await createRemoteVerificationRequest(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey, userId, username, "Moderator required channel verification");
-        const requestId = String(result?.request?.id || "");
-        if (!requestId) throw new Error("Verification request ID was not returned; no chat restriction was applied.");
+        const { requestId, expiresAt } = validateVerificationResult(result, remoteBackendUrl);
         try {
-            if (session.permanentBanHolds?.[userId]) throw new Error("A permanent ban superseded the verification request.");
+            if (session.permanentBanHolds?.[userId]) throw new Error("A permanent ban replaced this request. No verification restriction was applied.");
             await timeoutKickUser(token, session.broadcasterId, userId, 10080, "Channel verification required");
-            if (session.permanentBanHolds?.[userId]) throw new Error("A permanent ban was observed during verification setup; moderator review is required.");
+            if (session.permanentBanHolds?.[userId]) throw new Error("A permanent ban was observed while verification was starting. Review the current KICK ban state.");
             session.verificationLocks[requestId] = userId;
             await store.saveSession(session);
-            return result;
-        }
-        catch (e) {
+            verificationDeliveryCache.remember(key, result, expiresAt);
+            return { ...result, reused: false };
+        } catch (e) {
+            verificationDeliveryCache.forget(key);
             delete session.verificationLocks[requestId];
-            try { await completeRemoteVerification(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey, requestId, "verification_setup_failed_review_required"); } catch {}
-            // KICK's unban endpoint cannot remove just our timeout if another
-            // moderator changed it. Leave any applied restriction for manual review.
+            try { await completeRemoteVerification(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey, requestId, "verification_setup_failed_review_required"); } catch { }
             throw e;
         }
     });
@@ -228,7 +294,7 @@ function reportSealMatches(report) {
     const fresh = makeEvidenceSeal(report);
     return timingSafeEqual(Buffer.from(fresh.evidenceSeal, "hex"), Buffer.from(String(report.evidenceSeal), "hex"));
 }
-const APP_VERSION = "0.6.0-beta.12";
+const APP_VERSION = CLIENT_VERSION;
 let latestRelease = null;
 let lastReleaseCheckAt = 0;
 function versionTuple(v) {
@@ -299,7 +365,7 @@ function cookie(name, value, maxAge) {
         attrs.push(`Max-Age=${maxAge}`);
     return attrs.join("; ");
 }
-function getSession(req) { const id = parseCookies(req).ss_session; return id ? store.sessions.get(id) : undefined; }
+function getSession(req) { const id = parseCookies(req).ss_session; const session=id?store.sessions.get(id):undefined; return session?.reauthRequired?undefined:session; }
 function safeEqual(a, b) {
     const aa = Buffer.from(a), bb = Buffer.from(b);
     return aa.length === bb.length && timingSafeEqual(aa, bb);
@@ -346,6 +412,7 @@ async function jsonBody(req) { const b = await bodyBuffer(req); return b.length 
 function protectionHealth(session) {
     const now = Date.now();
     const reasons = [];
+    if (session.reauthRequired) reasons.push(session.clientSessionMessage || "Reconnect StreamShield after updating");
     if (!session.subscriptionHealthy) reasons.push("KICK event subscriptions are not fully healthy");
     if (remoteBackendConfigured && !session.remoteBackendRegistered) reasons.push("StreamShield cloud relay is disconnected");
     if (!session.lastWebhookAt) reasons.push("Awaiting the first signed KICK webhook event");
@@ -547,7 +614,7 @@ async function undoLastReversible(session) {
     await recordAction(session, { at: Date.now(), action: "recovery_undo", ok: true, detail: `Reversed ${target.action}`, meta: { recoveredAction: target.action, userId: target.meta?.userId || null } });
     return { ok: true, reversed: target.action };
 }
-function snapshot(session) { const lastReport = latestStreamReport(session); return JSON.stringify({ assessment: session.lastAssessment, isLive: session.isLive, lastWebhookAt: session.lastWebhookAt, lastPollAt: session.lastPollAt, mode: session.mode, shieldActive: session.shieldActive, followShieldEnabled: session.followShieldEnabled !== false, chatRaidShieldEnabled: session.chatRaidShieldEnabled !== false, linkScamShieldEnabled: session.linkScamShieldEnabled !== false, panicActive: !!session.panicActive, protectionHealth: protectionHealth(session), lastPreflight: session.lastPreflight || null, streamStats: ensureStreamStats(session), lastStreamReport: lastReport ? { id: lastReport.id, startedAt: lastReport.startedAt, endedAt: lastReport.lastObservedAt, summaryText: lastReport.summaryText || "", evidenceSeal: lastReport.evidenceSeal || "", eventChainId: lastReport.eventChainId || "", sealValid: reportSealMatches(lastReport) } : null, lastSubscriptionCheckAt: session.lastSubscriptionCheckAt, subscriptionHealthy: session.subscriptionHealthy, subscriptionMissing: session.subscriptionMissing || [], subscriptionError: session.subscriptionError || "", moderatorSetupConfirmed: !!session.moderatorSetupConfirmed, autoTimeoutEnabled: !!session.autoTimeoutEnabled, trustedUserIds: session.trustedUserIds ?? [], kickBotUsername, baseline: session.detector.getBaseline(), recentChat: session.recentChat.slice(0, 20), recentActions: session.recentActions.slice(0, 20), recentEvents: session.recentEvents.slice(0, 40), networkProtection: session.networkProtection ?? { enabled: false, auto_ban_exact_network_match: false, active_observations: 0, blocked_networks: 0, pending_enforcements: 0 }, networkGateUrl: remoteBackendConfigured ? `${remoteBackendUrl}/network/start?broadcaster_id=${encodeURIComponent(session.broadcasterId)}` : "", ipEnforcementAvailable: remoteBackendConfigured, publicWebhookAvailable, temporaryWebhookTunnel, webhookPublicUrl, remoteBackendConfigured, remoteBackendRegistered: !!session.remoteBackendRegistered, remoteBackendError: session.remoteBackendError || "", remoteBackendUrl: remoteBackendConfigured ? remoteBackendUrl : "", appVersion: APP_VERSION, latestRelease, lastReleaseCheckAt, updateAvailable: !!(latestRelease?.version && isNewerVersion(latestRelease.version, APP_VERSION)) }); }
+function snapshot(session) { const lastReport = latestStreamReport(session); return JSON.stringify({ assessment: session.lastAssessment, isLive: session.isLive, lastWebhookAt: session.lastWebhookAt, lastPollAt: session.lastPollAt, mode: session.mode, shieldActive: session.shieldActive, followShieldEnabled: session.followShieldEnabled !== false, chatRaidShieldEnabled: session.chatRaidShieldEnabled !== false, linkScamShieldEnabled: session.linkScamShieldEnabled !== false, panicActive: !!session.panicActive, protectionHealth: protectionHealth(session), lastPreflight: session.lastPreflight || null, streamStats: ensureStreamStats(session), lastStreamReport: lastReport ? { id: lastReport.id, startedAt: lastReport.startedAt, endedAt: lastReport.lastObservedAt, summaryText: lastReport.summaryText || "", evidenceSeal: lastReport.evidenceSeal || "", eventChainId: lastReport.eventChainId || "", sealValid: reportSealMatches(lastReport) } : null, lastSubscriptionCheckAt: session.lastSubscriptionCheckAt, subscriptionHealthy: session.subscriptionHealthy, subscriptionMissing: session.subscriptionMissing || [], subscriptionError: session.subscriptionError || "", moderatorSetupConfirmed: !!session.moderatorSetupConfirmed, autoTimeoutEnabled: !!session.autoTimeoutEnabled, trustedUserIds: session.trustedUserIds ?? [], kickBotUsername, baseline: session.detector.getBaseline(), recentChat: session.recentChat.slice(0, 20), recentActions: session.recentActions.slice(0, 20), recentEvents: session.recentEvents.slice(0, 40), networkProtection: session.networkProtection ?? { enabled: false, auto_ban_exact_network_match: false, active_observations: 0, blocked_networks: 0, pending_enforcements: 0 }, networkGateUrl: remoteBackendConfigured ? `${remoteBackendUrl}/network/start?broadcaster_id=${encodeURIComponent(session.broadcasterId)}` : "", ipEnforcementAvailable: remoteBackendConfigured, publicWebhookAvailable, temporaryWebhookTunnel, webhookPublicUrl, remoteBackendConfigured, remoteBackendRegistered: !!session.remoteBackendRegistered, remoteBackendError: session.remoteBackendError || "", remoteBackendUrl: remoteBackendConfigured ? remoteBackendUrl : "", appVersion: APP_VERSION, reauthRequired: !!session.reauthRequired, clientSessionMessage: session.clientSessionMessage || "", latestRelease, lastReleaseCheckAt, updateAvailable: !!(latestRelease?.version && isNewerVersion(latestRelease.version, APP_VERSION)) }); }
 function broadcast(session) { const data = `data: ${snapshot(session)}\n\n`; for (const r of sseBySession.get(session.id) || [])
     r.write(data); for (const r of sseByOverlay.get(session.overlayKey) || [])
     r.write(data); }
@@ -630,6 +697,8 @@ async function reassess(session, note) {
     return a;
 }
 async function ensureFreshToken(session) {
+    if(publicOauthBroker&&session.remoteInstallKey)await requireCurrentClientSession(session);
+    if(session.reauthRequired)throw new Error(session.clientSessionMessage||"Reconnect StreamShield.");
     if (Date.now() < session.tokenExpiresAt - 60_000)
         return session.token.access_token;
     if (!session.token.refresh_token)
@@ -649,6 +718,7 @@ async function ensureFreshToken(session) {
     return next.access_token;
 }
 async function ensureRemoteRegistration(session) {
+    if(session.reauthRequired)return;
     if (!remoteBackendConfigured || !session.remoteInstallKey)
         return;
     if (session.remoteBackendRegistered && !session.remoteBackendError)
@@ -703,7 +773,23 @@ async function processNetworkEnforcementQueue(session) {
                 continue;
             }
             try {
-                await applyPermanentUserBan(session, userId, "StreamShield blocked-network match");
+                const applied = await withNetworkPolicy(session, () => applyPermanentUserBan(session, userId, "StreamShield blocked-network match", async () => {
+                    const fresh = await getRemoteNetworkStatus(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey);
+                    const policy = fresh?.network;
+                    if (!policy || typeof policy.enabled !== "boolean" || typeof policy.auto_ban_exact_network_match !== "boolean") throw new Error("Network policy could not be confirmed; no automatic ban applied");
+                    session.networkProtection = policy;
+                    if (!policy.enabled || !policy.auto_ban_exact_network_match || userId === session.broadcasterId || (session.trustedUserIds ?? []).includes(userId)) return false;
+                    // The queue may predate an unblock. Confirm retained, still-blocked
+                    // history before enforcing; missing/truncated history goes to review.
+                    const history = await getRemoteNetworkHistory(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey);
+                    const summary = summarizeBanShield(history, userId, { enabled: true });
+                    return Number(summary.blocked_networks || 0) > 0;
+                }));
+                if (!applied) {
+                    await completeRemoteNetworkQueue(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey, item.id, "review_required_no_automatic_ban");
+                    pushEvent(session, { kind: "threat", title: "Possible ban evasion — review", detail: `@${item.kick_username || userId} has a queued network match. No automatic ban was applied. Shared connections can belong to different people.`, ok: false });
+                    continue;
+                }
                 await completeRemoteNetworkQueue(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey, item.id, "banned");
                 await recordAction(session, { at: Date.now(), action: "auto_ban_network_evasion", ok: true, detail: `Permanently banned @${item.kick_username || userId} after exact blocked-network verification match` });
             }
@@ -783,7 +869,7 @@ async function processVerificationQueue(session) {
             }
             else if (item.status === "blocked") {
                 await completeRemoteVerification(remoteBackendUrl, session.broadcasterId, session.remoteInstallKey, requestId, "blocked_network_chat_locked");
-                pushEvent(session, { kind: "threat", title: "Blocked-network verification match", detail: `@${item.kick_username || userId} verified from an exact previously blocked network. Chat remains locked and existing network enforcement settings apply.`, ok: false, score: 100 });
+                pushEvent(session, { kind: "threat", title: "Possible ban evasion — review", detail: `@${item.kick_username || userId} verified from an exact previously blocked network. Chat remains restricted for review. Shared connections are not proof of identity; any separately enabled auto-ban policy still applies.`, ok: false, score: 100 });
             }
         }
         await store.saveSession(session);
@@ -815,23 +901,23 @@ async function processModeratorCommands(session) {
                     await deleteKickChatMessage(await ensureFreshToken(session), messageId);
                     outcome = "message_deleted";
                 } else if (action === "verification_request") {
-                    if (!session.networkProtection?.enabled) throw new Error("Full Protection must be enabled before requiring verification");
+                    if (!session.networkProtection?.enabled) throw new Error("Network Shield must be enabled before requiring verification");
                     if (!userId || userId === session.broadcasterId) throw new Error("invalid verification target");
                     const created = await requestUserVerification(session, userId, username);
                     const url = String(created?.verification_url || "");
                     const requestId = String(created?.request?.id || "");
                     const readyMessage = verificationChatText(username, userId, url);
-                    let chatMessageSent = false, chatMessageError = "", chatMessageId = "";
+                    let chatMessageSent = false, chatMessageError = "", chatMessageId = "", chatMessageReused = false;
                     try {
                         const posted = await postVerificationChatMessage(session, username, userId, url, String(payload.messageId || ""));
                         chatMessageSent = true;
                         chatMessageId = posted.messageId;
+                        chatMessageReused = posted.reused === true;
                     } catch (e) {
                         chatMessageError = String(e?.message || "KICK chat message failed").slice(0, 250);
                     }
-                    result = { verification_url: url, request_id: requestId, ready_message: readyMessage, chat_message_sent: chatMessageSent, chat_message_id: chatMessageId, chat_message_error: chatMessageError };
-                    ensureStreamStats(session).verificationRequests = (ensureStreamStats(session).verificationRequests || 0) + 1;
-                    await recordAction(session, { at: Date.now(), action: "verification_request", ok: true, detail: `Remote moderator @${item.moderator_username || item.moderator_user_id} required verification from @${username || userId}; KICK chat message ${chatMessageSent ? "sent automatically" : "needs manual fallback"}`, meta: { userId, username, requestId, chatMessageSent, remoteModeratorUserId: Number(item.moderator_user_id) || 0 } });
+                    result = { verification_url: url, request_id: requestId, ready_message: readyMessage, chat_message_sent: chatMessageSent, chat_message_id: chatMessageId, chat_message_error: chatMessageError, reused: created.reused === true, chat_message_reused: chatMessageReused };
+                    await recordAction(session, { at: Date.now(), action: created.reused ? "verification_link_reused" : "verification_request", ok: true, detail: `Remote moderator @${item.moderator_username || item.moderator_user_id} required verification from @${username || userId}; KICK chat message ${chatMessageSent ? "sent automatically" : "needs manual fallback"}`, meta: { userId, username, requestId, chatMessageSent, remoteModeratorUserId: Number(item.moderator_user_id) || 0 } });
                     outcome = chatMessageSent ? "verification_created_and_message_sent" : "verification_created_message_fallback";
                 } else if (action === "timeout_10") {
                     if (!userId || userId === session.broadcasterId) throw new Error("invalid timeout target");
@@ -841,8 +927,8 @@ async function processModeratorCommands(session) {
                 } else if (action === "permanent_ban") {
                     if (!userId || userId === session.broadcasterId) throw new Error("invalid ban target");
                     await applyPermanentUserBan(session, userId, "StreamShield remote moderator permanent ban");
-                    ensureStreamStats(session).permanentBans = (ensureStreamStats(session).permanentBans || 0) + 1;
                     await recordAction(session, { at: Date.now(), action: "permanent_ban_user", ok: true, detail: `Remote moderator permanently banned @${username || userId}`, meta: { userId, username, remoteModeratorUserId: Number(item.moderator_user_id) || 0 } });
+                    result = { ban_shield: await describeBanShield(session, userId), account_banned: true };
                     outcome = "permanently_banned";
                 } else if (action === "unban") {
                     if (!userId || userId === session.broadcasterId) throw new Error("invalid unban target");
@@ -1158,7 +1244,7 @@ const server = http.createServer(async (req, res) => {
     try {
         const url = new URL(req.url || "/", baseUrl);
         if (req.method === "GET" && url.pathname === "/")
-            return send(res, 200, landing(kickConfigured, supportEmail));
+            return send(res, 200, landing(kickConfigured, supportEmail, [...store.sessions.values()].some(s=>s.reauthRequired)));
         if (req.method === "GET" && url.pathname === "/privacy")
             return send(res, 200, privacy(supportEmail));
         if (req.method === "GET" && url.pathname === "/terms")
@@ -1175,7 +1261,7 @@ const server = http.createServer(async (req, res) => {
                 }
                 catch (e) {
                     console.error("public oauth start", e.message);
-                    return send(res, 502, "StreamShield cloud OAuth is not ready yet. Please try again shortly.", "text/plain");
+                    return send(res, e.status === 426 ? 426 : 502, e.status === 426 ? e.message + " Download: https://streamshield-protection-public.vercel.app/update" : "StreamShield cloud OAuth is not ready yet. Please try again shortly.", "text/plain");
                 }
             }
             const state = randomBytes(24).toString("base64url"), { verifier, challenge } = makePkce();
@@ -1193,6 +1279,9 @@ const server = http.createServer(async (req, res) => {
                 const token = redeemed.token;
                 const session = store.createSession({ broadcasterId: redeemed.broadcaster_id, username: redeemed.username, slug: redeemed.slug, token, tokenExpiresAt: Date.now() + Number(token.expires_in || 3600) * 1000, isLive: false });
                 session.remoteInstallKey = installKey;
+                session.authClientVersion = APP_VERSION;
+                session.reauthRequired = false;
+                session.clientSessionMessage = "";
                 await ensureRemoteRegistration(session);
                 await reconcileKickSubscriptions(session);
                 await store.persistSessions();
@@ -1511,7 +1600,7 @@ const server = http.createServer(async (req, res) => {
                 if (!remoteBackendConfigured || !s.remoteBackendRegistered || !s.remoteInstallKey)
                     return send(res, 503, "StreamShield cloud backend is not connected", "text/plain");
                 if (!s.networkProtection?.enabled)
-                    return send(res, 409, "Enable Full Protection before requiring viewer verification", "text/plain");
+                    return send(res, 409, "Enable Network Shield before requiring viewer verification", "text/plain");
                 const b = await jsonBody(req);
                 const userId = Math.trunc(Number(b.userId));
                 const username = String(b.username || "").slice(0, 100);
@@ -1525,16 +1614,17 @@ const server = http.createServer(async (req, res) => {
                     const requestId = String(result?.request?.id || "");
                     const verificationUrl = String(result?.verification_url || "");
                     const readyMessage = verificationChatText(username, userId, verificationUrl);
-                    let chatMessageSent = false, chatMessageError = "", chatMessageId = "";
+                    let chatMessageSent = false, chatMessageError = "", chatMessageId = "", chatMessageReused = false;
                     try {
                         const posted = await postVerificationChatMessage(s, username, userId, verificationUrl, messageId);
                         chatMessageSent = true;
                         chatMessageId = posted.messageId;
+                        chatMessageReused = posted.reused === true;
                     } catch (e) {
                         chatMessageError = String(e?.message || "KICK chat message failed").slice(0, 250);
                     }
-                    const response = { ...result, ready_message: readyMessage, chat_message_sent: chatMessageSent, chat_message_id: chatMessageId, chat_message_error: chatMessageError };
-                    await recordAction(s, { at: Date.now(), action: "verification_request", ok: true, detail: `Required verification from @${username || userId}; KICK chat message ${chatMessageSent ? "sent automatically" : "needs manual fallback"}`, meta: { userId, username, requestId, chatMessageSent } });
+                    const response = { ...result, ready_message: readyMessage, chat_message_sent: chatMessageSent, chat_message_id: chatMessageId, chat_message_error: chatMessageError, chat_message_reused: chatMessageReused };
+                    await recordAction(s, { at: Date.now(), action: result.reused ? "verification_link_reused" : "verification_request", ok: true, detail: `Required verification from @${username || userId}; KICK chat message ${chatMessageSent ? "sent automatically" : "needs manual fallback"}`, meta: { userId, username, requestId, chatMessageSent } });
                     pushEvent(s, { kind: "action", title: "Channel verification required", detail: chatMessageSent ? `@${username || userId} cannot chat until verification finishes. StreamShield automatically replied in KICK chat with the one-time verification link.` : `@${username || userId} cannot chat until verification finishes. KICK could not auto-post the message, so use the copied fallback message.`, ok: true });
                     broadcast(s);
                     return send(res, 200, JSON.stringify(response), "application/json");
@@ -1586,6 +1676,12 @@ const server = http.createServer(async (req, res) => {
                 try {
                     await applyPermanentUserBan(s, userId, b.reason || "StreamShield permanent defensive ban");
                     await recordAction(s, { at: Date.now(), action: "permanent_ban_user", ok: true, detail: `${userId}`, meta: { userId } });
+                    if (b.shield === true) {
+                        const banShield = await describeBanShield(s, userId);
+                        pushEvent(s, { kind: "action", title: "Ban & Shield", detail: banShield.message, ok: true });
+                        broadcast(s);
+                        return send(res, 200, JSON.stringify({ ok: true, account_banned: true, ban_shield: banShield }), "application/json");
+                    }
                     return send(res, 204, "");
                 }
                 catch (e) {
@@ -1634,13 +1730,15 @@ const server = http.createServer(async (req, res) => {
                 if (!/^[a-f0-9]{64}$/i.test(networkHash))
                     return send(res, 400, "valid networkHash required", "text/plain");
                 try {
+                    return await withNetworkPolicy(s, async () => {
                     const result = await unblockRemoteNetwork(remoteBackendUrl, s.broadcasterId, s.remoteInstallKey, networkHash, b.reason || "manual_un_ip_ban");
-                    pushEvent(s, { kind: "action", title: result.unblocked ? "IP block removed" : "IP was already unblocked", detail: result.unblocked ? `Network block removed. ${Number(result.pending_actions_cancelled || 0)} pending auto-ban action(s) cancelled. Existing KICK account bans were not changed.` : "No active network block was found for that IP. Existing KICK account bans were not changed.", ok: true });
+                    pushEvent(s, { kind: "action", title: result.unblocked ? "Network block removed" : "Network was already unblocked", detail: result.unblocked ? `Network block removed. ${Number(result.pending_actions_cancelled || 0)} pending auto-ban action(s) cancelled. Existing KICK account bans were not changed.` : "No active block was found for that network. Existing KICK account bans were not changed.", ok: true });
                     await syncNetworkProtection(s);
                     await store.saveSession(s);
                     await recordAction(s, { at: Date.now(), action: "network_unblock", ok: true, detail: networkHash, meta: { networkHash, pendingActionsCancelled: Number(result.pending_actions_cancelled || 0) } });
                     broadcast(s);
                     return send(res, 200, JSON.stringify(result), "application/json");
+                    });
                 }
                 catch (e) {
                     return send(res, 502, JSON.stringify({ ok: false, error: e.message }), "application/json");
@@ -1650,6 +1748,7 @@ const server = http.createServer(async (req, res) => {
                 if (!remoteBackendConfigured || !s.remoteBackendRegistered || !s.remoteInstallKey)
                     return send(res, 503, "StreamShield cloud backend is not connected", "text/plain");
                 const b = await jsonBody(req);
+                return await withNetworkPolicy(s, async () => {
                 const result = await setRemoteNetworkSettings(remoteBackendUrl, s.broadcasterId, s.remoteInstallKey, {
                     enabled: Boolean(b.enabled),
                     autoBanExactNetworkMatch: Boolean(b.autoBanExactNetworkMatch),
@@ -1665,6 +1764,7 @@ const server = http.createServer(async (req, res) => {
                 await store.saveSession(s);
                 broadcast(s);
                 return send(res, 204, "");
+                });
             }
             if (url.pathname === "/api/disconnect") {
                 const errors = await revokeSessionTokens(s);

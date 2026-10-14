@@ -10,13 +10,14 @@
 </head>
 <body class="mod-panel-body">
 <main class="mod-panel-shell">
+<p id="quiet-mod-notice" class="mini" role="status" aria-live="polite" hidden></p>
 <header class="mod-panel-top">
 <div class="mod-panel-brand"><img src="/assets/brand/streamshield-shield-badge.png" width="44" height="40" alt=""><div><div class="eyebrow">STREAMSHIELD MOD DASHBOARD</div><h1 id="mod-channel">Connecting…</h1><div id="mod-identity" class="mini"></div></div></div>
 <div class="mod-panel-actions"><button id="mod-popout" class="button secondary small">▣ Compact Pop-Out</button><button id="mod-refresh" class="button secondary small">Refresh</button><button id="mod-logout" class="button secondary small">Log out</button></div>
 </header>
 
 <div id="mod-error" class="link-status error" hidden></div>
-<div class="notice mod-owner-note"><p><strong>Selected moderator access:</strong> this panel can moderate chat and request verification, but it cannot change Full Protection, disconnect the streamer’s KICK account, delete StreamShield data, or reveal full viewer IP addresses. The streamer can revoke access at any time.</p></div>
+<div class="notice mod-owner-note"><p><strong>Your moderator workspace:</strong> review recent chat, request verification, apply approved account actions, and open case history. The streamer manages channel-wide settings and moderator access.</p></div>
 
 <section class="mod-status-grid">
 <div class="card"><div class="eyebrow">Desktop status</div><div id="mod-desktop-status" class="mod-big-status">Waiting</div><p class="mini">Actions run through the streamer’s authorized StreamShield desktop. It must be open for queued actions to execute.</p></div>
@@ -26,7 +27,7 @@
 
 <section class="card mod-chat-card">
 <div class="mod-section-head"><div><div class="eyebrow">RECENT KICK CHAT</div><h2>Click the action you need.</h2></div><div class="status">SELECTED MOD ONLY</div></div>
-<p class="mini"><strong>Verify:</strong> temporarily restricts that viewer and automatically replies to their KICK message with the one-time verification link. If KICK cannot post it, StreamShield gives you the copy/paste fallback.</p><div id="mod-chat"><p class="mini">Loading recent chat…</p></div>
+<p class="mini"><strong>Verify:</strong> temporarily restricts that viewer and automatically replies to their KICK message with the one-time verification link. A ready-made copy/paste fallback is available when automatic delivery needs a hand.</p><div id="mod-chat"><p class="mini">Loading recent chat…</p></div>
 </section>
 
 <section class="grid two mod-secondary-grid">

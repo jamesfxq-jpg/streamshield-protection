@@ -216,6 +216,9 @@ export class RuntimeStore {
             slug: session.slug,
             token: session.token,
             tokenExpiresAt: session.tokenExpiresAt,
+            authClientVersion: session.authClientVersion,
+            reauthRequired: !!session.reauthRequired,
+            clientSessionMessage: session.clientSessionMessage || "",
             mode: session.mode,
             shieldActive: session.shieldActive,
             isLive: session.isLive,
@@ -258,6 +261,8 @@ export class RuntimeStore {
             Object.assign(existing, input, {
                 id: randomUUID(),
                 csrfToken: randomBytes(24).toString("base64url"),
+                reauthRequired: false,
+                clientSessionMessage: "",
                 isLive,
                 remoteBackendRegistered: false,
                 remoteBackendError: "",

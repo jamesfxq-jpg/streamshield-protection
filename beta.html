@@ -1,108 +1,18 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="referrer" content="no-referrer">
-<title>StreamShield Beta Tester Guide & Feedback</title>
-<meta name="description" content="Closed beta testing instructions, checklist, update guidance, and feedback form for StreamShield Protection Beta 12.">
-<link rel="canonical" href="https://streamshield-protection-public.vercel.app/beta">
-<link rel="icon" href="/assets/brand/streamshield-shield-badge.png" type="image/png">
-<link rel="stylesheet" href="/assets/site.css">
-<script src="/assets/beta.js" defer></script>
-</head>
-<body>
-<a class="skip-link" href="#main">Skip to content</a>
-<div class="wrap">
-<nav class="site-nav" aria-label="Main navigation">
-<a class="brand" href="/"><img src="/assets/brand/streamshield-shield-badge.png" width="43" height="39" alt="">StreamShield Protection</a>
-<div class="nav-links"><a href="/">Home</a><a href="/mods">Moderator Guide</a><a href="#checklist">Test checklist</a><a href="#updates">Updates</a><a href="#feedback">Feedback</a><a href="/privacy">Privacy</a></div>
-</nav>
-<main id="main">
-<section class="hero beta-hero">
-<img class="hero-logo" src="/assets/brand/streamshield-shield-badge.png" width="104" height="93" alt="StreamShield shield">
-<span class="badge">CLOSED BETA · 0.6.0-BETA.12</span>
-<h1>Help us break it before real attackers do.</h1>
-<p class="lead">Use StreamShield during normal KICK streams, tell us what is confusing or unreliable, and report false positives or moderation problems quickly.</p>
-<div class="actions"><a class="button" href="/releases/StreamShield-Protection-0.6.0-beta.12-Windows.zip" download>Download Beta 12</a><a class="button secondary" href="#feedback">Send beta feedback</a></div>
-</section>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><title>Beta testing &amp; feedback · StreamShield</title>
+<meta name="description" content="Try StreamShield with your moderation team and send useful feedback on installation, verification, recovery, and everyday controls."><link rel="canonical" href="https://streamshield-protection-public.vercel.app/beta">
 
-<section class="section grid two">
-<article class="card tint">
-<div class="eyebrow">Safe beta testing</div><h2>Start conservative.</h2>
-<ul class="list">
-<li>Test on your own KICK channel and use only accounts whose owners agreed to the test.</li>
-<li>For your first stream, leave automatic user timeouts and exact-network auto-ban off.</li>
-<li>Never paste passwords, KICK tokens, stream keys, private messages, or exact viewer IP addresses into feedback.</li>
-<li>An alert is a reason to review activity, not proof that a viewer caused an attack.</li>
-</ul>
-</article>
-<article class="card">
-<div class="eyebrow">What we need most</div><h2>Report what actually happens.</h2>
-<ul class="list">
-<li>Installation or update failures.</li>
-<li>KICK connection, event, viewer-count, or relay problems.</li>
-<li>Controls that are confusing, missing, slow, or unreliable.</li>
-<li>False positives, missed suspicious activity, or unsafe moderation behavior.</li>
-<li>Crashes, frozen screens, lost settings, reconnect problems, or report problems.</li>
-</ul>
-</article>
-</section>
-
-<section id="checklist" class="section card">
-<div class="eyebrow">Beta test checklist</div><h2>Run these in order.</h2>
-<ol class="steps">
-<li><div><strong>Install and launch.</strong><p>Extract the ZIP, run <strong>Install StreamShield.cmd</strong>, and confirm the dashboard opens at <span class="code">localhost:8787</span>.</p></div></li>
-<li><div><strong>Connect KICK.</strong><p>Use the official KICK authorization screen. Confirm your correct channel appears in StreamShield and approve the <strong>chat-message sending permission</strong> used for automatic verification replies.</p></div></li>
-<li><div><strong>Run Pre-Stream Protection Check.</strong><p>Record anything shown as failed, degraded, or pending. Offline channels may legitimately be waiting for a real signed KICK event.</p></div></li>
-<li><div><strong>Generate one ordinary real event.</strong><p>During an authorized test, have a consenting account chat or follow. Confirm StreamShield receives the event and updates health/status.</p></div></li>
-<li><div><strong>Use Compact Control.</strong><p>Resize it, keep it beside your stream tools, and check that recent chat, protection status, case controls, and recovery controls remain usable.</p></div></li>
-<li><div><strong>Test a controlled verification.</strong><p>Only with a consenting test account: open Recent KICK Chat, click <strong>Require Verification</strong> beside that chatter, confirm their chat is temporarily restricted, confirm StreamShield automatically replies to their KICK message with the @username + one-time verification link, have them select <strong>Continue with KICK</strong>, and confirm a clean result restores chat.</p></div></li>
-<li><div><strong>Test recovery carefully.</strong><p>Use only consenting accounts. Check timeout/unban or supported Undo actions one at a time. Confirm an independent permanent ban is not removed by an older verification unlock.</p></div></li>
-<li><div><strong>Test selected moderator access.</strong><p>From Recent KICK Chat, invite one consenting test account with <strong>Invite Mod</strong>. Open the private invite on another browser/device, connect the exact invited KICK account, verify the remote Mod Dashboard and Compact Pop-Out load, run one harmless command, then revoke access from the streamer dashboard and confirm the remote session stops working.</p></div></li>
-<li><div><strong>Check reporting.</strong><p>Generate or review the stream report, verify the evidence seal, and confirm the summary describes what StreamShield actually recorded.</p></div></li>
-<li><div><strong>Check OBS branding.</strong><p>Add one included PNG as an OBS Image source. Confirm it looks sharp, resizes cleanly, and does not interfere with your normal scene layout.</p></div></li>
-</ol>
-<div class="notice"><p><strong>Do not use ordinary viewers as test subjects for bans or verification.</strong> Moderation and verification tests should be limited to accounts that explicitly agreed to participate.</p></div>
-</section>
-
-<section class="section card">
-<div class="eyebrow">Moderator workflow</div><h2>How to select a viewer for StreamShield Verification.</h2>
-<ol class="steps">
-<li><div><strong>Open Recent KICK Chat.</strong><p>Use the full StreamShield dashboard or Compact Control while the connected channel is receiving chat.</p></div></li>
-<li><div><strong>Choose the account.</strong><p>Find the chatter you want to test and click <strong>Require Verification</strong> beside that user. StreamShield places a temporary chat restriction on that selected account.</p></div></li>
-<li><div><strong>StreamShield sends the verification reply.</strong><p>When Require Verification succeeds, StreamShield automatically replies in KICK chat to the selected viewer’s message with an @username verification message and one-time link. This is a <strong>public KICK chat reply, not a private DM</strong>. If KICK cannot send it, StreamShield copies the same ready-made message so the moderator can paste it manually. The link stays bound to the selected KICK account.</p></div></li>
-<li><div><strong>The viewer continues with KICK.</strong><p>The tester opens the link, selects <strong>Continue with KICK</strong>, and authorizes the KICK account named by the request.</p></div></li>
-<li><div><strong>Review the result.</strong><p>A clean result can release the StreamShield-owned temporary restriction. Network or browser-token matches should be reviewed, and exact blocked-network auto-ban should remain off during early beta testing unless the test specifically covers it.</p></div></li>
-</ol>
-</section>
-
-<section id="updates" class="section grid two">
-<article class="card"><div class="eyebrow">Updating Beta 12</div><h2>Keep your data.</h2>
-<ol class="list">
-<li>Close StreamShield.</li>
-<li>Download the newest beta ZIP from this site.</li>
-<li>Choose <strong>Extract All</strong>.</li>
-<li>Run the new <strong>Install StreamShield.cmd</strong>.</li>
-<li>Reopen StreamShield and rerun the Pre-Stream Protection Check.</li>
-</ol>
-<p class="mini">The installer updates application files while retaining the existing application data directory. Still report any lost settings, reconnect problem, or unexpected reset.</p></article>
-<article class="card"><div class="eyebrow">Windows notice</div><h2>Beta software can fail.</h2>
-<p>This beta is not yet commercially code signed, so Windows may show an unknown-publisher warning. Do not disable Windows security protections to install it. StreamShield can also miss activity, report false positives, lose connectivity, or make a moderation action you need to reverse.</p>
-<p class="mini">KICK controls its own platform, enforcement, monetization, and Partner Program decisions. StreamShield is not a KICK service and cannot guarantee a platform outcome.</p></article>
-</section>
-
-<section id="feedback" class="section card">
-<div class="eyebrow">Beta feedback</div><h2>Tell us what happened.</h2>
-<p class="mini">A successful test is useful feedback too. For bugs, include the exact steps that led to the problem. Do not submit credentials, stream keys, OAuth tokens, private messages, or exact viewer IP addresses.</p>
-<div id="feedback-error" class="link-status error" hidden role="alert"></div>
-<form class="feedback-form" action="https://blrdvuhnxtwnsphdxpkg.supabase.co/functions/v1/streamshield-beta-feedback" method="post" accept-charset="UTF-8">
+<link rel="icon" href="/assets/brand/streamshield-shield-badge.png" type="image/png"><link rel="stylesheet" href="/assets/site.css">
+<script src="/assets/beta.js" defer></script></head><body><a class="skip-link" href="#main">Skip to content</a><div class="wrap">
+<nav class="site-nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/brand/streamshield-shield-badge.png" width="43" height="39" alt="">StreamShield Protection</a><div class="nav-links"><a href="/how-it-works">How it works</a><a href="/#features">Features</a><a href="/mods">For moderators</a><a href="/update">Get the update</a><a href="/beta">Beta feedback</a></div></nav>
+<main id="main"><section class="hero"><span class="badge">HELP SHAPE THE BETA</span><h1>Tell us what makes moderation easier.</h1><p class="lead">Your real-world feedback helps improve setup, verification, recovery, and the everyday controls your team uses.</p><div class="actions"><a class="button" href="/releases/StreamShield-Protection-0.6.0-beta.14-Windows.zip" download>Download Windows Beta 14</a><a class="button secondary" href="#feedback">Send feedback</a></div></section><section class="section card" id="checklist"><h2>A useful first test.</h2><ol class="steps"><li><div><strong>Install, connect, and check.</strong><p>Use the current build, connect the correct KICK account, and run Pre-Stream Check. Note any pending or failed items.</p></div></li><li><div><strong>Confirm a normal channel event.</strong><p>With a consenting test account, send an ordinary chat message and confirm it appears in recent activity.</p></div></li><li><div><strong>Try the verification flow.</strong><p>Use Verify / Resend on that test account. Check the delivered link, account check, result, and clean chat restoration.</p></div></li><li><div><strong>Review moderator tools and recovery.</strong><p>Check Compact Control, one authorized moderator invite, a harmless action, and its recorded outcome. Use only consenting accounts for controlled restrictions or bans.</p></div></li><li><div><strong>Send the details.</strong><p>Tell us your build number, the steps you took, what you expected, and what happened. Include a screenshot only after removing private information.</p></div></li></ol></section><section id="updates" class="section card tint"><h2>Keep the whole team on the current release.</h2><p>Close StreamShield before updating. Extract the new ZIP, run the installer, reconnect when asked, and rerun Pre-Stream Check. Web moderators reload their dashboard and renew their sign-in if prompted.</p><a class="button secondary" href="/update">Read update instructions</a></section><section id="feedback" class="section card"><div class="eyebrow">Beta feedback</div><h2>What worked? What needs attention?</h2><p>Share setup issues, confusing controls, false positives, missed alerts, or ideas that would save your moderation team time.</p><p id="feedback-error" class="form-error" role="alert" hidden></p><form class="feedback-form" action="https://blrdvuhnxtwnsphdxpkg.supabase.co/functions/v1/streamshield-beta-feedback" method="post" accept-charset="UTF-8">
 <div class="form-grid two">
 <label><span>Your name <em>optional</em></span><input name="tester_name" maxlength="100" autocomplete="name"></label>
 <label><span>KICK username <em>optional</em></span><input name="kick_username" maxlength="80" autocomplete="off" placeholder="@username"></label>
 <label><span>Email <em>optional</em></span><input name="email" type="email" maxlength="254" autocomplete="email"><small>Only include this if you want a reply.</small></label>
 <label><span>Windows version</span><input name="windows_version" maxlength="80" required placeholder="Windows 11 24H2"></label>
-<label><span>StreamShield version</span><input name="streamshield_version" maxlength="40" required value="0.6.0-beta.12"></label>
+<label><span>StreamShield version</span><input name="streamshield_version" maxlength="40" required value="0.6.0-beta.14"></label>
 <label><span>What did you test?</span><select name="test_area" required>
 <option value="">Choose one</option><option value="install">Install / first launch</option><option value="kick_connect">KICK connection</option><option value="prestream">Pre-Stream Protection Check</option><option value="compact">Compact Control</option><option value="chat">Chat / event monitoring</option><option value="verification">Viewer verification</option><option value="network">Network protection</option><option value="moderation">Moderation actions</option><option value="recovery">Recovery / undo</option><option value="reports">Stream reports / evidence</option><option value="obs">OBS branding / overlay</option><option value="update">Update / reinstall</option><option value="other">Other</option>
 </select></label>
@@ -120,16 +30,5 @@
 <label class="check-row"><input type="checkbox" name="beta_acknowledged" required> <span>I understand this is beta software, I will use consenting accounts for controlled moderation/verification tests, and I have not included passwords, tokens, stream keys, private messages, or exact viewer IP addresses.</span></label>
 <div class="hp" aria-hidden="true"><label>Company website<input name="company_website" tabindex="-1" autocomplete="off"></label></div>
 <button class="button" type="submit">Submit beta feedback</button>
-</form>
-</section>
-
-<section class="section card tint">
-<div class="eyebrow">Beta tester disclaimer</div><h2>Important limits.</h2>
-<p>StreamShield Beta 12 is pre-release defensive software. Features can fail, change, or produce incorrect results. It does not guarantee detection or prevention of botting, ban evasion, fake engagement, harassment, or other abuse. Automated and network-based actions can produce false positives, especially with shared, mobile, VPN, or reassigned networks.</p>
-<p>Use conservative settings, review alerts before escalating moderation, and keep the normal KICK moderation tools available. By testing, you are helping evaluate the product; you are not being asked to weaken your account security or expose confidential information.</p>
-</section>
-</main>
-<footer class="site-footer">StreamShield Protection · Closed Beta · Windows 0.6.0-beta.12<div class="footer-links"><a href="/">Home</a><a href="/privacy">Privacy</a><a href="/terms">Terms &amp; Safe Use</a><a href="#feedback">Beta feedback</a></div></footer>
-</div>
-</body>
-</html>
+</form></section><section class="section card"><h2>Test with care.</h2><p>Start with review-first settings and keep KICK’s normal controls available. Beta behavior can change or produce incorrect results. Use consenting accounts for controlled moderation tests, and keep passwords, tokens, stream keys, private messages, and full viewer IP addresses out of reports.</p></section></main>
+<footer class="site-footer">StreamShield Protection · Windows 0.6.0-beta.14 · Built for KICK communities.<br>Independent software, not affiliated with KICK. Beta release.<div class="footer-links"><a href="/how-it-works">How it works</a><a href="/mods">Moderator guide</a><a href="/update">Updates</a><a href="/beta#feedback">Feedback</a><a href="/privacy">Privacy &amp; data controls</a><a href="/terms">Terms</a></div></footer></div></body></html>
