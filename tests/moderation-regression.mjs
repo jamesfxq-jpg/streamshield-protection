@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 import { RuntimeStore } from '../desktop/app/dist/src/store.js';
+import { summarizeBanShield, validateVerificationResult, createVerificationDeliveryCache } from '../desktop/app/dist/src/quietShield.js';
 
 const source = await readFile(new URL('../desktop/app/dist/src/server.js', import.meta.url), 'utf8');
 function extract(name) {
@@ -11,7 +12,7 @@ function extract(name) {
   const next = /\n(?:async )?function \w+\(/.exec(rest);
   return rest.slice(0, next?.index ?? rest.length);
 }
-const names = ['withUserModeration', 'invalidateVerificationLocks', 'applyPermanentUserBan', 'applyUserTimeout', 'releaseUserRestriction', 'observePermanentUserBan', 'requestUserVerification', 'processVerificationQueue', 'protectionHealth', 'runPreflight'];
+const names = ['verificationCacheKey', 'withNetworkPolicy', 'describeBanShield', 'verificationChatText', 'postVerificationChatMessage', 'processNetworkEnforcementQueue', 'withUserModeration', 'invalidateVerificationLocks', 'applyPermanentUserBan', 'applyUserTimeout', 'releaseUserRestriction', 'observePermanentUserBan', 'requestUserVerification', 'processVerificationQueue', 'protectionHealth', 'runPreflight'];
 const code = names.map(extract).join('\n');
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 function fixture() {
@@ -19,12 +20,20 @@ function fixture() {
   const f = { session, calls: [], outcomes: [], saved: [], queueReads: 0, isBanned: true, hooks: {} };
   const context = {
     Date, Number, String, Object, Map, Promise, Error, console,
+    summarizeBanShield, validateVerificationResult, verificationDeliveryCache: createVerificationDeliveryCache(), networkPolicyTails: new Map(),
     remoteBackendConfigured: true, publicWebhookAvailable: true, remoteBackendUrl: 'https://fixture.invalid', userModerationTails: new Map(),
     fetch: () => { throw new Error('Live network access is forbidden in regression tests'); },
     store: { saveSession: async s => { f.saved.push(JSON.parse(JSON.stringify({ locks: s.verificationLocks, holds: s.permanentBanHolds }))); } },
     getRemoteVerificationQueue: async () => { f.queueReads++; return f.hooks.queue ? await f.hooks.queue(f.queueReads) : { items: [{ id: 'req', kick_user_id: 456, status: 'verified' }] }; },
     completeRemoteVerification: async (_url, _channel, _key, id, outcome) => { f.outcomes.push({ id, outcome }); if (f.hooks.complete) await f.hooks.complete(id, outcome); return { ok: true, completed: true }; },
-    createRemoteVerificationRequest: async () => { f.calls.push('create'); return f.hooks.create ? await f.hooks.create() : { request: { id: 'new-request' }, verification_url: 'https://fixture.invalid/verify' }; },
+    createRemoteVerificationRequest: async () => { f.calls.push('create'); return f.hooks.create ? await f.hooks.create() : { request: { id: 'new-request' }, verification_url: 'https://fixture.invalid/verification/start?request='+'A'.repeat(32), expires_at:new Date(Date.now()+30*60_000).toISOString() }; },
+    getRemoteVerificationRecent: async () => f.hooks.recent ? await f.hooks.recent() : { items: [] },
+    getRemoteNetworkHistory: async () => f.hooks.history ? await f.hooks.history() : { history: [] },
+    getRemoteNetworkStatus: async () => f.hooks.policy ? await f.hooks.policy() : { network: { enabled: true, auto_ban_exact_network_match: false } },
+    getRemoteNetworkQueue: async () => f.hooks.networkQueue ? await f.hooks.networkQueue() : { items: [{ id:'network-match',kick_user_id:456,kick_username:'viewer' }] },
+    completeRemoteNetworkQueue: async (_url,_channel,_key,id,outcome) => { f.outcomes.push({id,outcome}); },
+    syncNetworkProtection: async () => {},
+    sendKickChatMessage: async (_token,_channel,content) => { if(f.hooks.chat) await f.hooks.chat(content); f.calls.push('chat'); return {data:{message_id:'chat-fixture'}}; },
     ensureFreshToken: async () => f.hooks.token ? await f.hooks.token() : 'fixture-token',
     banKickUser: async () => { if (f.hooks.ban) await f.hooks.ban(); f.calls.push('ban'); f.isBanned = true; },
     unbanKickUser: async () => { if (f.hooks.unban) await f.hooks.unban(); f.calls.push('unban'); f.isBanned = false; },
@@ -133,6 +142,84 @@ test('health waits for first signed event, and preflight fails on a registered-b
   assert.equal(preflight.ready, false); assert.equal(preflight.checks.find(c => c.key === 'cloud_relay').status, 'fail');
 });
 
+
+test('two verification requests reuse the same fresh pending request without another timeout', async () => {
+  const f=fixture(); f.session.verificationLocks={};
+  f.hooks.recent=async()=>({items:[{id:'new-request',kick_user_id:456,status:'pending'}]});
+  const a=await f.context.requestUserVerification(f.session,456,'viewer');
+  const b=await f.context.requestUserVerification(f.session,456,'viewer');
+  assert.equal(a.reused,false);assert.equal(b.reused,true);assert.equal(b.verification_url,a.verification_url);
+  assert.deepEqual(f.calls,['create','timeout']);
+});
+test('rapid resend attempts make one chat post and do not reapply the timeout', async () => {
+  const f=fixture();f.session.verificationLocks={};
+  const a=await f.context.requestUserVerification(f.session,456,'viewer');
+  const results=await Promise.all([f.context.postVerificationChatMessage(f.session,'viewer',456,a.verification_url),f.context.postVerificationChatMessage(f.session,'viewer',456,a.verification_url)]);
+  assert.equal(results[0].reused,false);assert.equal(results[1].reused,true);
+  assert.deepEqual(f.calls,['create','timeout','chat']);
+  assert.match(results[0].content,/Please verify to chat/);assert.doesNotMatch(results[0].content,/IP|suspicious|evasi|blocked|device/i);
+});
+test('a failed chat post may be retried without recreating verification', async () => {
+  const f=fixture();f.session.verificationLocks={};
+  const a=await f.context.requestUserVerification(f.session,456,'viewer');
+  f.hooks.chat=async()=>{throw new Error('chat unavailable');};
+  await assert.rejects(f.context.postVerificationChatMessage(f.session,'viewer',456,a.verification_url),/chat unavailable/);
+  delete f.hooks.chat;await f.context.postVerificationChatMessage(f.session,'viewer',456,a.verification_url);
+  assert.deepEqual(f.calls,['create','timeout','chat']);
+});
+test('reviewed, blocked, completed, wrong-account and missing requests cannot be reused', async () => {
+  for(const row of [{id:'new-request',kick_user_id:456,status:'review'},{id:'new-request',kick_user_id:456,status:'blocked'},{id:'new-request',kick_user_id:456,status:'verified'},{id:'new-request',kick_user_id:999,status:'pending'},{id:'other',kick_user_id:456,status:'pending'}]){
+    const f=fixture();f.session.verificationLocks={};await f.context.requestUserVerification(f.session,456,'viewer');f.hooks.recent=async()=>({items:[row]});
+    await assert.rejects(f.context.requestUserVerification(f.session,456,'viewer'),/already has a verification restriction/);assert.deepEqual(f.calls,['create','timeout']);
+  }
+});
+test('an external ban during pending-request recheck prevents reuse and message delivery', async () => {
+  const f=fixture();f.session.verificationLocks={};const a=await f.context.requestUserVerification(f.session,456,'viewer');
+  f.hooks.recent=async()=>{await f.context.observePermanentUserBan(f.session,456,new Date().toISOString());return{items:[{id:'new-request',kick_user_id:456,status:'pending'}]};};
+  await assert.rejects(f.context.requestUserVerification(f.session,456,'viewer'));
+  await assert.rejects(f.context.postVerificationChatMessage(f.session,'viewer',456,a.verification_url));
+  assert.deepEqual(f.calls,['create','timeout']);
+});
+test('review-first rejects previously queued network bans without altering account restrictions', async () => {
+  const f=fixture();await f.context.processNetworkEnforcementQueue(f.session);
+  assert.deepEqual(f.calls,[]);assert.equal(f.outcomes.at(-1).outcome,'review_required_no_automatic_ban');assert.equal(f.session.verificationLocks.req,456);
+});
+test('network opt-in is rechecked after token refresh before a queued automatic ban', async () => {
+  const f=fixture();let enabled=true;f.hooks.policy=async()=>({network:{enabled:true,auto_ban_exact_network_match:enabled}});f.hooks.token=async()=>{enabled=false;return'fixture-token';};
+  await f.context.processNetworkEnforcementQueue(f.session);assert.deepEqual(f.calls,[]);
+});
+test('unavailable or malformed network policy never applies an automatic ban', async () => {
+  for(const response of [null,{}, {network:{enabled:true}}]){const f=fixture();f.hooks.policy=async()=>response;await f.context.processNetworkEnforcementQueue(f.session);assert.deepEqual(f.calls,[]);}
+  const f=fixture();f.hooks.policy=async()=>{throw new Error('policy offline');};await f.context.processNetworkEnforcementQueue(f.session);assert.deepEqual(f.calls,[]);
+});
+test('trusted users are skipped even with a queued network match', async () => {
+  const f=fixture();f.session.trustedUserIds=[456];await f.context.processNetworkEnforcementQueue(f.session);assert.deepEqual(f.calls,[]);assert.equal(f.outcomes.at(-1).outcome,'skipped_trusted');
+});
+test('Ban & Shield history failure is reported without undoing the successful account ban', async () => {
+  const f=fixture();f.hooks.history=async()=>{throw new Error('offline');};await f.context.applyPermanentUserBan(f.session,456,'test');const status=await f.context.describeBanShield(f.session,456);
+  assert.equal(status.state,'history_unavailable');assert.deepEqual(f.calls,['ban']);assert.ok(f.session.permanentBanHolds[456]);
+});
+
+test('an explicit ban with failed token refresh still cancels automatic verification release ownership', async () => {
+ const f=fixture();f.hooks.token=async()=>{throw new Error('token unavailable');};
+ await assert.rejects(f.context.applyPermanentUserBan(f.session,456,'moderator intent'),/token unavailable/);assert.equal(f.session.verificationLocks.req,undefined);
+ delete f.hooks.token;await f.context.processVerificationQueue(f.session);assert.deepEqual(f.calls,[]);
+});
+test('explicitly opted-in network enforcement still applies after the fresh policy check', async () => {
+ const f=fixture();f.hooks.policy=async()=>({network:{enabled:true,auto_ban_exact_network_match:true}});f.hooks.history=async()=>({history:[{accounts:[{kick_user_id:456}],blocked:true}]});
+ await f.context.processNetworkEnforcementQueue(f.session);assert.deepEqual(f.calls,['ban']);assert.equal(f.outcomes.at(-1).outcome,'banned');
+});
+test('a queued network match cannot ban after its retained network is unblocked', async () => {
+ const f=fixture();f.hooks.policy=async()=>({network:{enabled:true,auto_ban_exact_network_match:true}});
+ f.hooks.history=async()=>({history:[{accounts:[{kick_user_id:456}],blocked:false,blocked_at:'2026-10-01',unblocked_at:'2026-10-02'}]});
+ await f.context.processNetworkEnforcementQueue(f.session);assert.deepEqual(f.calls,[]);assert.equal(f.outcomes.at(-1).outcome,'review_required_no_automatic_ban');
+});
+test('a settings change already in flight is serialized ahead of queued network enforcement', async () => {
+ const f=fixture(), gate=deferred(), entered=deferred();let auto=true;
+ f.hooks.policy=async()=>({network:{enabled:true,auto_ban_exact_network_match:auto}});
+ const settings=f.context.withNetworkPolicy(f.session,async()=>{entered.resolve();await gate.promise;auto=false;});await entered.promise;
+ const enforcing=f.context.processNetworkEnforcementQueue(f.session);gate.resolve();await Promise.all([settings,enforcing]);assert.deepEqual(f.calls,[]);
+});
 let passed = 0;
 for (const { name, fn } of tests) {
   let timer;

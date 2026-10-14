@@ -40,28 +40,48 @@
     }
     throw new Error("Action is still queued. Keep the streamer’s StreamShield desktop open.");
   }
-  async function runAction(action,row){
+  const pendingUsers = new Set();
+  function notice(message) {
+    const el = document.getElementById("quiet-mod-notice");
+    if (el) { el.textContent = String(message); el.hidden = false; }
+    else alert(message);
+  }
+  async function runAction(action, row) {
+    const userKey = String(row.sender_id);
+    if (pendingUsers.has(userKey)) { notice("An action for this account is pending. Check command history before retrying."); return; }
     clearError();
-    const labels={delete_message:"delete this message",verification_request:"require verification",timeout_10:"timeout this user for 10 minutes",permanent_ban:"permanently ban this user",unban:"unban this user",case_file:"open this case file"};
-    if(action!=="case_file" && !confirm("StreamShield: "+(labels[action]||"run this action")+" for "+(row.sender_username?"@"+row.sender_username:"this KICK user")+"?")) return;
-    try{
-      const cmd=await post("/moderator/command",{action,userId:row.sender_id,username:row.sender_username||"",messageId:row.kick_chat_message_id||""});
-      const done=await waitCommand(cmd.command.id);
-      if(action==="verification_request"){
-        const message=done.result?.ready_message||"";
-        if(done.result?.chat_message_sent){
-          alert("Verification required. StreamShield automatically replied to that viewer in KICK chat with the one-time link.");
-        } else if(message){
-          try{await navigator.clipboard.writeText(message);alert("KICK could not auto-send the verification reply. The fallback message was copied.");}
-          catch{prompt("KICK could not auto-send. Copy this verification message:",message);}
+    const labels = { delete_message: "delete this message", verification_request: "require verification", timeout_10: "timeout this user for 10 minutes", permanent_ban: "permanently ban this account and check its retained verified network history", unban: "unban this account (separate network blocks remain)", case_file: "open this case file" };
+    const warning = action === "permanent_ban" ? " A shared network is not proof that accounts belong to the same person." : "";
+    if (action !== "case_file" && !confirm("StreamShield: " + (labels[action] || "run this action") + " for " + (row.sender_username ? "@" + row.sender_username : "this KICK user") + "?" + warning)) return;
+    pendingUsers.add(userKey);
+    notice("Submitting moderator action…");
+    try {
+      const cmd = await post("/moderator/command", { action, userId: row.sender_id, username: row.sender_username || "", messageId: row.kick_chat_message_id || "" });
+      const done = await waitCommand(cmd.command.id);
+      if (action === "verification_request") {
+        const message = done.result?.ready_message || "";
+        if (done.result?.chat_message_sent) {
+          notice(done.result.chat_message_reused ? "The active verification link is already in chat. No duplicate message was added." : "Verification link sent in chat. An active request is reused when available.");
+        } else if (message) {
+          try { await navigator.clipboard.writeText(message); notice("Verification is active. KICK could not send the link; the fallback message was copied."); }
+          catch { notice("Verification is active. Use the copy dialog to deliver the link."); prompt("Copy this verification message:", message); }
         }
-      } else if(action==="case_file"){
-        showCase(done.result?.caseFile||{});
+      } else if (action === "case_file") {
+        showCase(done.result?.caseFile || {});
+        notice("Case file ready for review.");
+      } else if (action === "permanent_ban") {
+        notice(done.result?.ban_shield?.message || "Account ban confirmed. Check Network & Ban History for network status.");
       } else {
-        alert("Completed: "+String(done.outcome||action).replaceAll("_"," "));
+        notice("Completed: " + String(done.outcome || action).replaceAll("_", " "));
       }
-      await load();
-    }catch(e){fail(e.message||"Moderator action failed");}
+      // Rendering failures must not claim the completed action failed.
+      try { await load(); } catch {}
+    } catch (e) {
+      fail((e.message || "Unable to confirm this action.") + " Check command history before retrying; a queued action may still complete.");
+    } finally {
+      pendingUsers.delete(userKey);
+      for (const button of document.querySelectorAll?.('[data-quiet-user="' + Number(row.sender_id) + '"]') || []) button.disabled = false;
+    }
   }
 
   function showCase(c){
@@ -99,13 +119,13 @@
       const actions=document.createElement("div");actions.className="mod-chat-actions";
       const defs=[
         ["Delete","delete_message","secondary"],
-        ["Verify","verification_request","secondary"],
+        ["Verify / Resend","verification_request","secondary"],
         ["10m","timeout_10","secondary"],
-        ["Ban","permanent_ban","danger"],
+        ["Ban & Shield","permanent_ban","danger"],
         ["Unban","unban","secondary"],
         ["Case","case_file","secondary"]
       ];
-      for(const [label,action,cls] of defs){const b=document.createElement("button");b.className="button small "+cls;b.textContent=label;b.onclick=()=>runAction(action,row);actions.append(b);}
+      for(const [label,action,cls] of defs){const b=document.createElement("button");b.className="button small "+cls;b.textContent=label;b.setAttribute("data-quiet-user",String(row.sender_id));b.disabled=pendingUsers.has(String(row.sender_id));b.onclick=()=>runAction(action,row);actions.append(b);}
       wrap.append(top,msg,actions);root.append(wrap);
     }
   }
@@ -115,7 +135,7 @@
     for(const row of rows.slice(0,12)){
       const d=document.createElement("div");d.className="mod-mini-row";
       const who=document.createElement("b");who.textContent=row.kick_username?"@"+row.kick_username:"KICK user "+row.kick_user_id;
-      const s=document.createElement("span");s.className="status "+((row.status==="blocked"||row.status==="review")?"error":"");s.textContent=String(row.status||"").toUpperCase();
+      const s=document.createElement("span");s.className="status "+((row.status==="blocked"||row.status==="review")?"error":"");s.textContent=row.status==="blocked"?"NETWORK MATCH — REVIEW":row.status==="review"?"REVIEW REQUIRED":String(row.status||"").toUpperCase();
       d.append(who,s);root.append(d);
     }
   }

@@ -29,7 +29,7 @@ const old=await render(before);
 assert.equal(old.elements['#compactIpHistory'].innerHTML,'<p class="small">No blocked verified IPs.</p>');
 assert.equal(descendants(old.elements['#compactQueue']).filter(n=>n.tagName==='button').length,0);
 const next=await render(after);
-const unblock=descendants(next.elements['#compactIpHistory']).find(n=>n.textContent==='UN-IP BAN');
+const unblock=descendants(next.elements['#compactIpHistory']).find(n=>n.textContent==='Remove Network Block');
 assert.ok(unblock);assert.match(next.elements['#compactIpHistory'].textContent,/NET-AAAAAAAA/);assert.doesNotMatch(next.elements['#compactIpHistory'].textContent,/192\.0\.2\./);assert.doesNotMatch(next.elements['#compactIpHistory'].textContent,/NET-BBBBBBBB/);
 await unblock.onclick();
 assert.deepEqual(next.calls.find(c=>c.path==='/api/network-unblock').body,{networkHash:'a'.repeat(64),reason:'compact_control_un_ip_ban'});
@@ -37,6 +37,6 @@ const release=descendants(next.elements['#compactQueue']).find(n=>n.textContent=
 assert.ok(release);await release.onclick();
 assert.deepEqual(next.calls.find(c=>c.path==='/api/verification/release').body,{userId:910000002,requestId:'00000000-0000-4000-8000-000000000001'});
 console.log('PASS: Beta 9 reproduces both missing controls with authoritative backend response shapes.');
-console.log('PASS: current compact UI renders only a masked network ID + UN-IP BAN, never a full IP; explicit blocked=false excludes historical blocks.');
+console.log('PASS: current compact UI renders only a masked network ID + Remove Network Block, never a full IP; explicit blocked=false excludes historical blocks.');
 console.log('PASS: Beta 10 renders pending verification release and submits the authoritative row.id.');
 console.log('All network interactions stubbed; no browser, real KICK account, or cloud mutation used.');

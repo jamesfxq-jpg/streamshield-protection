@@ -5,19 +5,22 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="strict-origin">
 <meta name="robots" content="noindex,nofollow,noarchive">
-<title>StreamShield Verification</title>
+<title>Verify to chat · StreamShield</title>
 <link rel="stylesheet" href="/assets/site.css">
 <link rel="icon" href="/assets/brand/streamshield-shield-badge.png" type="image/png">
 <script src="/assets/verify.js" defer></script>
 </head>
 <body class="verify-minimal">
 <main class="verify-minimal-shell">
+<div class="verify-brand">STREAMSHIELD</div>
+<h1>Verify to chat</h1>
+<p class="verify-intro">This channel uses StreamShield to reduce spam and repeat abuse.</p>
 <form id="verification-form" method="post" action="https://blrdvuhnxtwnsphdxpkg.supabase.co/functions/v1/streamshield-backend/verification/kick">
 <fieldset id="verification-fields" disabled>
 <input type="hidden" name="consent" value="yes">
-<button id="continue-button" class="button verify-only-button" type="submit" disabled>Continue with KICK</button>
+<button id="continue-button" aria-describedby="verification-disclosure" class="button verify-only-button" type="submit" disabled>Continue with KICK</button>
 </fieldset>
-<p class="verify-disclosure">Continuing verifies your KICK account and connection for channel moderation. <a href="/privacy">Privacy</a></p>
+<p id="verification-disclosure" class="verify-disclosure">By continuing, you agree to KICK account verification and the use of a privacy-protected network identifier and a first-party browser token for channel moderation. StreamShield does not store or show your full IP address. <a href="/privacy">Privacy and data details</a></p>
 </form>
 <p id="link-status" class="verify-error" hidden role="status" aria-live="polite"></p>
 <noscript><p class="verify-error">JavaScript is required to use this verification link.</p></noscript>

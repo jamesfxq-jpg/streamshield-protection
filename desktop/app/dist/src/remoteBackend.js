@@ -77,13 +77,15 @@ export async function deleteRemoteChannelData(url, broadcasterId, installKey) {
 export async function getRemoteNetworkStatus(url, broadcasterId, installKey) {
     const u = new URL(`${base(url)}/network/status`);
     u.searchParams.set("broadcaster_id", String(broadcasterId));
-    const res = await fetch(u, { headers: { accept: "application/json", "x-streamshield-install-key": installKey } });
+    const res = await fetch(u, { signal: AbortSignal.timeout(5000),
+        headers: { accept: "application/json", "x-streamshield-install-key": installKey } });
     return parse(res);
 }
 export async function getRemoteNetworkHistory(url, broadcasterId, installKey) {
     const u = new URL(`${base(url)}/network/history`);
     u.searchParams.set("broadcaster_id", String(broadcasterId));
-    const res = await fetch(u, { headers: { accept: "application/json", "x-streamshield-install-key": installKey } });
+    const res = await fetch(u, { signal: AbortSignal.timeout(5000),
+        headers: { accept: "application/json", "x-streamshield-install-key": installKey } });
     return parse(res);
 }
 export async function unblockRemoteNetwork(url, broadcasterId, installKey, networkHash, reason = "manual_un_ip_ban") {
@@ -139,7 +141,8 @@ export async function getRemoteVerificationQueue(url, broadcasterId, installKey)
 export async function getRemoteVerificationRecent(url, broadcasterId, installKey) {
     const u = new URL(`${base(url)}/verification/recent`);
     u.searchParams.set("broadcaster_id", String(broadcasterId));
-    const res = await fetch(u, { headers: { accept: "application/json", "x-streamshield-install-key": installKey } });
+    const res = await fetch(u, { signal: AbortSignal.timeout(5000),
+        headers: { accept: "application/json", "x-streamshield-install-key": installKey } });
     return parse(res);
 }
 export async function completeRemoteVerification(url, broadcasterId, installKey, id, outcome) {

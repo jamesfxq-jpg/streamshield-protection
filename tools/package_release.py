@@ -39,7 +39,7 @@ metadata = {
     "sha256": digest,
     "size_bytes": len(payload),
     "published_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-    "notes": "Adds automatic KICK chat replies for targeted verification using chat:write, with reply-to-viewer delivery and clipboard fallback, while retaining selected remote moderator access and hash-only network identity.",
+    "notes": "Quiet Shield: review-first network setup, Ban & Shield status, neutral verification messages, safe active-link reuse, duplicate-click protection, and current-policy checks before queued network enforcement. No additional OAuth permissions or database migration.",
 }
 (ROOT / "release.json").write_text(json.dumps(metadata, indent=2) + "\n")
 RELEASE.with_suffix(RELEASE.suffix + ".sha256").write_text(f"{digest}  {FILENAME}\n")

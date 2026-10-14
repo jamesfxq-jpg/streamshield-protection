@@ -112,3 +112,34 @@ Beta 11 no longer persists encrypted full viewer IP addresses. Verification uses
 Beta 12 adds KICK's documented `chat:write` permission. After **Require Verification** successfully creates the one-time request and applies the temporary chat restriction, StreamShield automatically posts the verification message into KICK chat and replies to the selected chatter's message when a message ID is available. The post uses the connected broadcaster's user authorization. If KICK refuses or cannot send the message, StreamShield keeps the verification request active and copies the ready-made message as a manual fallback.
 
 Existing installations should reconnect KICK once after updating to Beta 12 so the new chat permission can be approved.
+
+### Beta 13 — Quiet Shield
+
+The Beta 13 update is prepared on `streamshield/quiet-shield-beta13`. Its Windows
+package and hosted UI changes must be released together; branch build results
+are not proof that the production website or live KICK OAuth has been tested.
+
+- **Network Shield** replaces the old one-click Full Protection setup with a
+  review-first preset. Installing does not silently overwrite existing settings;
+  choosing the preset disables automatic exact-network bans explicitly.
+- **Ban & Shield** combines account moderation with a private, bounded check of
+  retained verified history. It distinguishes disabled protection, unavailable
+  history, no retained match, pending synchronization and confirmed blocks.
+  Existing signed KICK ban events still perform network marking asynchronously.
+- **Verify / Resend** uses the same still-pending, account-bound request and its
+  original expiry. Successful automatic chat posts are limited to one per link
+  per minute. Expired/completed/reviewed/missing requests fail closed. The resend
+  cache is session-scoped, bounded and in memory only.
+- **Remove Network Block** is the former UN-IP BAN action, with clearer wording.
+  It still does not undo KICK account bans. Network settings and unblock actions
+  are serialized against automatic queue enforcement. Current opt-in and
+  retained blocked history are rechecked before an automatic network ban.
+- Full, compact and hosted moderator UIs suppress duplicate in-flight actions.
+  Successful actions use private inline notices rather than blocking popups.
+- The hosted viewer page explains network identifiers and first-party browser
+  tokens visibly. No covert tracking, raw IP storage, extra KICK OAuth scope,
+  device fingerprinting or database migration was introduced.
+
+Additional regression entry point: `node tests/quiet-shield.test.mjs`.
+The optional Windows test argument `-LocalZipPath <candidate.zip>` tests a
+checksum-verified local candidate rather than asserting it is already published.
