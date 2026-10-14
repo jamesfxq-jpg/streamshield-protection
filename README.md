@@ -1,3 +1,5 @@
+> **Beta 14 rollout status:** source and package preparation, not proof of deployment. The matching backend migration/function and website must be published and checked before activating required sign-out. See `docs/beta14-required-update.md`.
+
 # StreamShield Protection
 
 **0.6.0-beta.12** — a Windows desktop application for monitoring and moderating a connected KICK channel, with a public download site and a cloud OAuth/webhook service.
@@ -143,3 +145,11 @@ are not proof that the production website or live KICK OAuth has been tested.
 Additional regression entry point: `node tests/quiet-shield.test.mjs`.
 The optional Windows test argument `-LocalZipPath <candidate.zip>` tests a
 checksum-verified local candidate rather than asserting it is already published.
+
+### Beta 14 — clear onboarding and required-update support
+
+The homepage, How it works page, moderator guide, beta-feedback page and update page now explain the end-to-end workflow, with privacy disclosures retained in the relevant places. Current desktop, web and package version strings agree.
+
+The new dormant cloud policy separates minimum-client-version compatibility from authentication. Signed OAuth state/tickets and installation/moderator epochs require fresh sign-in after activation. Legacy local credentials are expired on first Beta 14 launch without deleting saved channel settings, ban holds, verification ownership or reports. Supported desktop clients check authorization with a short lease before using cached KICK credentials; unavailable checks fail closed without erasing credentials.
+
+Additional regression commands: `node tests/required-update.test.mjs`, `python tests/site-content.py`, and `python tests/site-browser.py` (Playwright required). The publication/activation order and current acceptance gaps are in `docs/beta14-required-update.md`. Client-reported version/check-in metadata are not binary attestation or proof that an offline installation updated.

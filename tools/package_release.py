@@ -39,7 +39,7 @@ metadata = {
     "sha256": digest,
     "size_bytes": len(payload),
     "published_at": datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-    "notes": "Quiet Shield: review-first network setup, Ban & Shield status, neutral verification messages, safe active-link reuse, duplicate-click protection, and current-policy checks before queued network enforcement. No additional OAuth permissions or database migration.",
+    "notes": "Quiet Shield Beta 14: clearer setup and how-it-works guide, unified version reporting, fresh StreamShield sign-in, and server-controlled required updates. Install, reconnect, and run Pre-Stream Check. Saved settings and bans are retained.",
 }
 (ROOT / "release.json").write_text(json.dumps(metadata, indent=2) + "\n")
 RELEASE.with_suffix(RELEASE.suffix + ".sha256").write_text(f"{digest}  {FILENAME}\n")

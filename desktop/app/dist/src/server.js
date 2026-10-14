@@ -1,4 +1,7 @@
 import http from "node:http";
+import { CLIENT_VERSION } from "./clientVersion.js";
+import { createClientSessionGuard, expireClientSession } from "./clientSession.js";
+import { getRemoteClientSession } from "./remoteBackend.js";
 import { summarizeBanShield, validateVerificationResult, createVerificationDeliveryCache } from "./quietShield.js";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { readFile, writeFile, unlink } from "node:fs/promises";
@@ -49,6 +52,20 @@ const publicOauthBroker = remoteBackendConfigured && process.env.STREAMSHIELD_PU
 const kickConfigured = legacyKickConfigured || publicOauthBroker;
 const store = new RuntimeStore(dataDir);
 await store.init();
+if (publicOauthBroker) {
+    let changed=false;
+    for (const session of store.sessions.values()) {
+        if (!session.authClientVersion) {
+            expireClientSession(session,"StreamShield has been updated. Reconnect with KICK to start a fresh session; your saved settings and bans are retained.");
+            changed=true;
+        }
+    }
+    if(changed)await store.persistSessions();
+}
+const requireCurrentClientSession = createClientSessionGuard({
+    check: session => getRemoteClientSession(remoteBackendUrl,session.broadcasterId,session.remoteInstallKey),
+    expire: async (session,message) => {expireClientSession(session,message);await store.saveSession(session);broadcast(session);}
+});
 const oauthState = new Map();
 const sseBySession = new Map();
 const sseByOverlay = new Map();
@@ -277,7 +294,7 @@ function reportSealMatches(report) {
     const fresh = makeEvidenceSeal(report);
     return timingSafeEqual(Buffer.from(fresh.evidenceSeal, "hex"), Buffer.from(String(report.evidenceSeal), "hex"));
 }
-const APP_VERSION = "0.6.0-beta.12";
+const APP_VERSION = CLIENT_VERSION;
 let latestRelease = null;
 let lastReleaseCheckAt = 0;
 function versionTuple(v) {
@@ -348,7 +365,7 @@ function cookie(name, value, maxAge) {
         attrs.push(`Max-Age=${maxAge}`);
     return attrs.join("; ");
 }
-function getSession(req) { const id = parseCookies(req).ss_session; return id ? store.sessions.get(id) : undefined; }
+function getSession(req) { const id = parseCookies(req).ss_session; const session=id?store.sessions.get(id):undefined; return session?.reauthRequired?undefined:session; }
 function safeEqual(a, b) {
     const aa = Buffer.from(a), bb = Buffer.from(b);
     return aa.length === bb.length && timingSafeEqual(aa, bb);
@@ -395,6 +412,7 @@ async function jsonBody(req) { const b = await bodyBuffer(req); return b.length 
 function protectionHealth(session) {
     const now = Date.now();
     const reasons = [];
+    if (session.reauthRequired) reasons.push(session.clientSessionMessage || "Reconnect StreamShield after updating");
     if (!session.subscriptionHealthy) reasons.push("KICK event subscriptions are not fully healthy");
     if (remoteBackendConfigured && !session.remoteBackendRegistered) reasons.push("StreamShield cloud relay is disconnected");
     if (!session.lastWebhookAt) reasons.push("Awaiting the first signed KICK webhook event");
@@ -596,7 +614,7 @@ async function undoLastReversible(session) {
     await recordAction(session, { at: Date.now(), action: "recovery_undo", ok: true, detail: `Reversed ${target.action}`, meta: { recoveredAction: target.action, userId: target.meta?.userId || null } });
     return { ok: true, reversed: target.action };
 }
-function snapshot(session) { const lastReport = latestStreamReport(session); return JSON.stringify({ assessment: session.lastAssessment, isLive: session.isLive, lastWebhookAt: session.lastWebhookAt, lastPollAt: session.lastPollAt, mode: session.mode, shieldActive: session.shieldActive, followShieldEnabled: session.followShieldEnabled !== false, chatRaidShieldEnabled: session.chatRaidShieldEnabled !== false, linkScamShieldEnabled: session.linkScamShieldEnabled !== false, panicActive: !!session.panicActive, protectionHealth: protectionHealth(session), lastPreflight: session.lastPreflight || null, streamStats: ensureStreamStats(session), lastStreamReport: lastReport ? { id: lastReport.id, startedAt: lastReport.startedAt, endedAt: lastReport.lastObservedAt, summaryText: lastReport.summaryText || "", evidenceSeal: lastReport.evidenceSeal || "", eventChainId: lastReport.eventChainId || "", sealValid: reportSealMatches(lastReport) } : null, lastSubscriptionCheckAt: session.lastSubscriptionCheckAt, subscriptionHealthy: session.subscriptionHealthy, subscriptionMissing: session.subscriptionMissing || [], subscriptionError: session.subscriptionError || "", moderatorSetupConfirmed: !!session.moderatorSetupConfirmed, autoTimeoutEnabled: !!session.autoTimeoutEnabled, trustedUserIds: session.trustedUserIds ?? [], kickBotUsername, baseline: session.detector.getBaseline(), recentChat: session.recentChat.slice(0, 20), recentActions: session.recentActions.slice(0, 20), recentEvents: session.recentEvents.slice(0, 40), networkProtection: session.networkProtection ?? { enabled: false, auto_ban_exact_network_match: false, active_observations: 0, blocked_networks: 0, pending_enforcements: 0 }, networkGateUrl: remoteBackendConfigured ? `${remoteBackendUrl}/network/start?broadcaster_id=${encodeURIComponent(session.broadcasterId)}` : "", ipEnforcementAvailable: remoteBackendConfigured, publicWebhookAvailable, temporaryWebhookTunnel, webhookPublicUrl, remoteBackendConfigured, remoteBackendRegistered: !!session.remoteBackendRegistered, remoteBackendError: session.remoteBackendError || "", remoteBackendUrl: remoteBackendConfigured ? remoteBackendUrl : "", appVersion: APP_VERSION, latestRelease, lastReleaseCheckAt, updateAvailable: !!(latestRelease?.version && isNewerVersion(latestRelease.version, APP_VERSION)) }); }
+function snapshot(session) { const lastReport = latestStreamReport(session); return JSON.stringify({ assessment: session.lastAssessment, isLive: session.isLive, lastWebhookAt: session.lastWebhookAt, lastPollAt: session.lastPollAt, mode: session.mode, shieldActive: session.shieldActive, followShieldEnabled: session.followShieldEnabled !== false, chatRaidShieldEnabled: session.chatRaidShieldEnabled !== false, linkScamShieldEnabled: session.linkScamShieldEnabled !== false, panicActive: !!session.panicActive, protectionHealth: protectionHealth(session), lastPreflight: session.lastPreflight || null, streamStats: ensureStreamStats(session), lastStreamReport: lastReport ? { id: lastReport.id, startedAt: lastReport.startedAt, endedAt: lastReport.lastObservedAt, summaryText: lastReport.summaryText || "", evidenceSeal: lastReport.evidenceSeal || "", eventChainId: lastReport.eventChainId || "", sealValid: reportSealMatches(lastReport) } : null, lastSubscriptionCheckAt: session.lastSubscriptionCheckAt, subscriptionHealthy: session.subscriptionHealthy, subscriptionMissing: session.subscriptionMissing || [], subscriptionError: session.subscriptionError || "", moderatorSetupConfirmed: !!session.moderatorSetupConfirmed, autoTimeoutEnabled: !!session.autoTimeoutEnabled, trustedUserIds: session.trustedUserIds ?? [], kickBotUsername, baseline: session.detector.getBaseline(), recentChat: session.recentChat.slice(0, 20), recentActions: session.recentActions.slice(0, 20), recentEvents: session.recentEvents.slice(0, 40), networkProtection: session.networkProtection ?? { enabled: false, auto_ban_exact_network_match: false, active_observations: 0, blocked_networks: 0, pending_enforcements: 0 }, networkGateUrl: remoteBackendConfigured ? `${remoteBackendUrl}/network/start?broadcaster_id=${encodeURIComponent(session.broadcasterId)}` : "", ipEnforcementAvailable: remoteBackendConfigured, publicWebhookAvailable, temporaryWebhookTunnel, webhookPublicUrl, remoteBackendConfigured, remoteBackendRegistered: !!session.remoteBackendRegistered, remoteBackendError: session.remoteBackendError || "", remoteBackendUrl: remoteBackendConfigured ? remoteBackendUrl : "", appVersion: APP_VERSION, reauthRequired: !!session.reauthRequired, clientSessionMessage: session.clientSessionMessage || "", latestRelease, lastReleaseCheckAt, updateAvailable: !!(latestRelease?.version && isNewerVersion(latestRelease.version, APP_VERSION)) }); }
 function broadcast(session) { const data = `data: ${snapshot(session)}\n\n`; for (const r of sseBySession.get(session.id) || [])
     r.write(data); for (const r of sseByOverlay.get(session.overlayKey) || [])
     r.write(data); }
@@ -679,6 +697,8 @@ async function reassess(session, note) {
     return a;
 }
 async function ensureFreshToken(session) {
+    if(publicOauthBroker&&session.remoteInstallKey)await requireCurrentClientSession(session);
+    if(session.reauthRequired)throw new Error(session.clientSessionMessage||"Reconnect StreamShield.");
     if (Date.now() < session.tokenExpiresAt - 60_000)
         return session.token.access_token;
     if (!session.token.refresh_token)
@@ -698,6 +718,7 @@ async function ensureFreshToken(session) {
     return next.access_token;
 }
 async function ensureRemoteRegistration(session) {
+    if(session.reauthRequired)return;
     if (!remoteBackendConfigured || !session.remoteInstallKey)
         return;
     if (session.remoteBackendRegistered && !session.remoteBackendError)
@@ -1223,7 +1244,7 @@ const server = http.createServer(async (req, res) => {
     try {
         const url = new URL(req.url || "/", baseUrl);
         if (req.method === "GET" && url.pathname === "/")
-            return send(res, 200, landing(kickConfigured, supportEmail));
+            return send(res, 200, landing(kickConfigured, supportEmail, [...store.sessions.values()].some(s=>s.reauthRequired)));
         if (req.method === "GET" && url.pathname === "/privacy")
             return send(res, 200, privacy(supportEmail));
         if (req.method === "GET" && url.pathname === "/terms")
@@ -1240,7 +1261,7 @@ const server = http.createServer(async (req, res) => {
                 }
                 catch (e) {
                     console.error("public oauth start", e.message);
-                    return send(res, 502, "StreamShield cloud OAuth is not ready yet. Please try again shortly.", "text/plain");
+                    return send(res, e.status === 426 ? 426 : 502, e.status === 426 ? e.message + " Download: https://streamshield-protection-public.vercel.app/update" : "StreamShield cloud OAuth is not ready yet. Please try again shortly.", "text/plain");
                 }
             }
             const state = randomBytes(24).toString("base64url"), { verifier, challenge } = makePkce();
@@ -1258,6 +1279,9 @@ const server = http.createServer(async (req, res) => {
                 const token = redeemed.token;
                 const session = store.createSession({ broadcasterId: redeemed.broadcaster_id, username: redeemed.username, slug: redeemed.slug, token, tokenExpiresAt: Date.now() + Number(token.expires_in || 3600) * 1000, isLive: false });
                 session.remoteInstallKey = installKey;
+                session.authClientVersion = APP_VERSION;
+                session.reauthRequired = false;
+                session.clientSessionMessage = "";
                 await ensureRemoteRegistration(session);
                 await reconcileKickSubscriptions(session);
                 await store.persistSessions();

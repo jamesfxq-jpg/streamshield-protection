@@ -2,6 +2,7 @@ const events=['chat.message.sent','channel.followed','livestream.status.updated'
 const response=(x,status=200)=>new Response(JSON.stringify(x),{status,headers:{'content-type':'application/json'}});
 globalThis.fetch=async (raw,init={})=>{
  const url=new URL(String(raw));const p=url.pathname;const method=init.method||'GET';
+ if(p.endsWith('/client/session'))return response({ok:true,auth_epoch:0,enforced:false});
  if(url.hostname==='api.kick.com'){
   if(p.endsWith('/events/subscriptions')) return response({data:events.map(event=>({event,version:1,method:'webhook'}))});
   if(p.endsWith('/livestreams')) return response({data:[]});

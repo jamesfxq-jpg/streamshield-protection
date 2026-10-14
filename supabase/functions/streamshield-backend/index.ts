@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { supportedClientVersion, currentAuthEpoch } from "./clientPolicy.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const secretJson = Deno.env.get("SUPABASE_SECRET_KEYS");
@@ -39,7 +40,7 @@ function json(status: number, value: unknown, extra: Record<string,string> = {})
 const MOD_CORS = {
   "access-control-allow-origin": PUBLIC_WEB_ORIGIN,
   "access-control-allow-methods": "GET, POST, OPTIONS",
-  "access-control-allow-headers": "content-type, x-streamshield-mod-session",
+  "access-control-allow-headers": "content-type, x-streamshield-mod-session, x-streamshield-client-version",
 };
 function modJson(status:number,value:unknown,extra:Record<string,string>={}) {
   return json(status,value,{...MOD_CORS,...extra});
@@ -236,12 +237,64 @@ async function refreshToken(refreshToken:string, creds:{clientId:string;clientSe
   if(!r.ok) throw new Error(`Kick token refresh ${r.status}: ${typeof parsed==="string"?parsed:JSON.stringify(parsed)}`);
   return parsed;
 }
+
+const CLIENT_VERSION_HEADER="x-streamshield-client-version";
+const UPDATE_URL=PUBLIC_WEB_ORIGIN+"/update";
+type ClientPolicy={enforced:boolean;minimum_version:string;auth_epoch:number;force_reauth_after:string|null;download_url:string|null;release_sha256:string|null};
+async function getClientPolicy():Promise<ClientPolicy> {
+  const response=await rest("streamshield_client_policy?singleton=eq.true&select=enforced,minimum_version,auth_epoch,force_reauth_after,download_url,release_sha256&limit=1",{headers:{accept:"application/json"}});
+  const row=(await response.json())?.[0];
+  if(!row||typeof row.enforced!=="boolean"||!Number.isSafeInteger(row.auth_epoch)||row.auth_epoch<0||!supportedClientVersion(row.minimum_version,row.minimum_version)) throw new Error("Client update policy unavailable");
+  return row;
+}
+function clientVersion(req:Request) {return (req.headers.get(CLIENT_VERSION_HEADER)||"").trim();}
+function requiredUpdate(policy:ClientPolicy, moderator=false) {
+  const value={error:"update_required",message:`StreamShield ${policy.minimum_version} or newer is required. Download the update, install it, and reconnect StreamShield.`,minimum_version:policy.minimum_version,update_url:UPDATE_URL,download_url:policy.download_url,sign_out:true};
+  return moderator?modJson(426,value):json(426,value);
+}
+function freshLoginRequired(moderator=false) {
+  const value={error:"reauthentication_required",message:"Your StreamShield session has ended. Install the current update and reconnect with KICK.",update_url:UPDATE_URL,sign_out:true};
+  return moderator?modJson(401,value):json(401,value);
+}
+async function enforceClientPolicy(req:Request,path:string) {
+  const prefix="/functions/v1/streamshield-backend";
+  const functionStart=path.indexOf("/streamshield-backend");
+  const route=path.startsWith(prefix)?path.slice(prefix.length):functionStart>=0?path.slice(functionStart+"/streamshield-backend".length):path;
+  const desktop=new Set(["/oauth/start","/oauth/redeem","/oauth/refresh","/register","/client/session","/events","/status","/verification/request","/verification/queue","/verification/recent","/verification/complete","/network/status","/network/history","/network/settings","/network/unblock","/network/queue","/network/queue/complete","/delete-data"]);
+  const moderator=route.startsWith("/moderator/")&&!route.startsWith("/moderator/install/");
+  if(![...desktop].some(suffix=>path.endsWith(suffix))&&!path.includes("/moderator/install/")&&!moderator) return null;
+  // Logout and invite-info remain available without granting a session or commands.
+  if(route==="/moderator/logout"||route==="/moderator/invite-info")return null;
+  const policy=await getClientPolicy();
+  const version=route==="/moderator/start"?new URL(req.url).searchParams.get("client_version"):clientVersion(req);
+  if(policy.enforced&&!supportedClientVersion(version,policy.minimum_version))return requiredUpdate(policy,moderator);
+  return null;
+}
+async function handleClientPolicy() {
+  const policy=await getClientPolicy();
+  return json(200,{...policy,update_url:UPDATE_URL},{"access-control-allow-origin":PUBLIC_WEB_ORIGIN});
+}
+async function handleClientSession(req:Request) {
+  const broadcasterId=Number(new URL(req.url).searchParams.get("broadcaster_id"));
+  if(!Number.isSafeInteger(broadcasterId)||broadcasterId<=0)return json(400,{error:"invalid_broadcaster_id"});
+  if(!(await authorizeInstall(req,broadcasterId)))return freshLoginRequired();
+  const keyHash=await sha256Hex(req.headers.get("x-streamshield-install-key")||"");
+  const policy=await getClientPolicy();
+  // Conditional heartbeat never recreates or upgrades a revoked installation.
+  const response=await rest(`streamshield_channels?broadcaster_id=eq.${broadcasterId}&install_key_hash=eq.${keyHash}`+(policy.enforced?`&auth_epoch=eq.${policy.auth_epoch}`:""),{method:"PATCH",headers:{prefer:"return=representation"},body:JSON.stringify({client_version:clientVersion(req)||null,last_client_seen_at:new Date().toISOString()})});
+  if(!(await response.json())?.length)return freshLoginRequired();
+  return json(200,{ok:true,auth_epoch:policy.auth_epoch,minimum_version:policy.minimum_version,enforced:policy.enforced});
+}
+
 async function authorizeInstall(req: Request, broadcasterId: number) {
   const key=req.headers.get("x-streamshield-install-key")??"";
   if(key.length<32) return false;
-  const r=await rest(`streamshield_channels?broadcaster_id=eq.${broadcasterId}&select=install_key_hash&limit=1`,{headers:{accept:"application/json"}});
-  const expected=(await r.json())?.[0]?.install_key_hash;
-  return expected ? safeEqualHex(await sha256Hex(key),String(expected)) : false;
+  const r=await rest(`streamshield_channels?broadcaster_id=eq.${broadcasterId}&select=install_key_hash,auth_epoch&limit=1`,{headers:{accept:"application/json"}});
+  const registration=(await r.json())?.[0];
+  const expected=registration?.install_key_hash;
+  if(!expected||!safeEqualHex(await sha256Hex(key),String(expected)))return false;
+  const policy=await getClientPolicy();
+  return !policy.enforced||(supportedClientVersion(clientVersion(req),policy.minimum_version)&&currentAuthEpoch(registration.auth_epoch,policy.auth_epoch));
 }
 
 async function cleanupExpired() {
@@ -267,6 +320,7 @@ async function handleOwnerBootstrap(req:Request) {
 
 async function handleOauthStart(req:Request) {
   const body:any=await readJson(req);
+  const policy=await getClientPolicy();
   const localCallback=String(body?.local_callback??"");
   const installKey=String(body?.install_key??"");
   if(!validLocalCallback(localCallback)) return json(400,{error:"invalid_local_callback"});
@@ -275,7 +329,7 @@ async function handleOauthStart(req:Request) {
   const verifier=bytesToBase64Url(crypto.getRandomValues(new Uint8Array(48)));
   const challenge=bytesToBase64Url(await sha256Bytes(verifier));
   const state=await seal({
-    v:1,exp:Date.now()+10*60_000,verifier,local_callback:localCallback,install_hash:await sha256Hex(installKey)
+    v:1,exp:Date.now()+10*60_000,verifier,local_callback:localCallback,install_hash:await sha256Hex(installKey),client_version:clientVersion(req),auth_epoch:policy.auth_epoch
   },creds.clientSecret);
   const u=new URL("https://id.kick.com/oauth/authorize");
   u.searchParams.set("response_type","code");
@@ -444,9 +498,11 @@ async function moderatorSession(req:Request) {
   if(!/^[A-Za-z0-9_-]{32,128}$/.test(raw)) return null;
   const hash=await sha256Hex(raw);
   const now=encodeURIComponent(new Date().toISOString());
-  const sr=await rest(`streamshield_moderator_sessions?session_token_hash=eq.${hash}&revoked_at=is.null&expires_at=gt.${now}&select=id,broadcaster_id,kick_user_id,kick_username,expires_at&limit=1`,{headers:{accept:"application/json"}});
+  const sr=await rest(`streamshield_moderator_sessions?session_token_hash=eq.${hash}&revoked_at=is.null&expires_at=gt.${now}&select=id,broadcaster_id,kick_user_id,kick_username,expires_at,created_at,auth_epoch&limit=1`,{headers:{accept:"application/json"}});
   const session=(await sr.json())?.[0];
   if(!session) return null;
+  const policy=await getClientPolicy();
+  if(policy.enforced&&(!currentAuthEpoch(session.auth_epoch,policy.auth_epoch)||!supportedClientVersion(clientVersion(req),policy.minimum_version)||!Number.isFinite(Date.parse(session.created_at))||Date.parse(session.created_at)<=Date.parse(policy.force_reauth_after||"9999-01-01")))return null;
   const mr=await rest(`streamshield_moderators?broadcaster_id=eq.${Number(session.broadcaster_id)}&kick_user_id=eq.${Number(session.kick_user_id)}&active=eq.true&select=broadcaster_id,kick_user_id,kick_username,permissions,active&limit=1`,{headers:{accept:"application/json"}});
   const moderator=(await mr.json())?.[0];
   if(!moderator) return null;
@@ -518,6 +574,7 @@ async function handleModeratorInviteInfo(req:Request) {
   return modJson(200,{ok:true,invite:{kick_user_id:invite.kick_user_id,kick_username:invite.kick_username,expires_at:invite.expires_at},channel});
 }
 async function handleModeratorStart(req:Request) {
+  const policy=await getClientPolicy();
   const raw=String(new URL(req.url).searchParams.get("invite")??"");
   const invite=await getModeratorInvite(raw);
   if(!invite) return verificationResult(410,"Moderator Invite","This StreamShield moderator invite is invalid or expired.");
@@ -525,7 +582,7 @@ async function handleModeratorStart(req:Request) {
   const verifier=bytesToBase64Url(crypto.getRandomValues(new Uint8Array(48)));
   const challenge=bytesToBase64Url(await sha256Bytes(verifier));
   const state=await seal({
-    v:4,flow:"moderator_invite",exp:Date.now()+10*60_000,verifier,
+    v:4,flow:"moderator_invite",exp:Date.now()+10*60_000,verifier,auth_epoch:policy.auth_epoch,client_version:new URL(req.url).searchParams.get("client_version")||"",
     invite_hash:await sha256Hex(raw),broadcaster_id:Number(invite.broadcaster_id),expected_user_id:Number(invite.kick_user_id)
   },creds.clientSecret);
   const auth=new URL("https://id.kick.com/oauth/authorize");
@@ -612,7 +669,9 @@ async function handleOauthCallback(req:Request) {
   try {
     const creds=await getAppCreds();
     const st=await unseal<any>(state,creds.clientSecret);
-    if(Number(st?.exp)<Date.now()) throw new Error("expired state");
+    if(!Number.isFinite(st?.exp)||Number(st.exp)<Date.now()) throw new Error("expired state");
+    const policy=await getClientPolicy();
+    if(policy.enforced&&(st?.v===1||st?.v===4)&&(!currentAuthEpoch(st.auth_epoch,policy.auth_epoch)||!supportedClientVersion(st.client_version,policy.minimum_version)))return verificationResult(426,"Update StreamShield",`Install StreamShield ${policy.minimum_version} or newer and start a fresh connection from the current app or moderator page.`);
     const token=await exchangeCode(code,String(st?.verifier??""),creds);
 
     if(st?.v===4 && st?.flow==="moderator_invite") {
@@ -633,7 +692,7 @@ async function handleOauthCallback(req:Request) {
       const sessionRaw=bytesToBase64Url(crypto.getRandomValues(new Uint8Array(36)));
       await rest("streamshield_moderator_sessions",{method:"POST",headers:{prefer:"return=minimal"},body:JSON.stringify({
         broadcaster_id:broadcasterId,kick_user_id:expectedUserId,kick_username:String(user.name??"").slice(0,100),
-        session_token_hash:await sha256Hex(sessionRaw),expires_at:new Date(Date.now()+12*60*60_000).toISOString()
+        session_token_hash:await sha256Hex(sessionRaw),auth_epoch:st.auth_epoch??0,expires_at:new Date(Date.now()+12*60*60_000).toISOString()
       })});
       const target=new URL("/mod-panel",PUBLIC_WEB_ORIGIN);
       target.hash="session="+encodeURIComponent(sessionRaw);
@@ -714,7 +773,7 @@ async function handleOauthCallback(req:Request) {
     if(!user||!channel) throw new Error("Kick identity lookup failed");
     const jti=crypto.randomUUID();
     const ticket=await seal({
-      v:1,jti,exp:Date.now()+5*60_000,install_hash:String(st.install_hash),
+      v:1,jti,exp:Date.now()+5*60_000,install_hash:String(st.install_hash),client_version:String(st.client_version||""),auth_epoch:st.auth_epoch??0,
       token,broadcaster_id:Number(user.user_id),username:String(user.name??""),slug:String(channel.slug??"")
     },creds.clientSecret);
     const target=new URL(String(st.local_callback));
@@ -730,7 +789,9 @@ async function handleOauthRedeem(req:Request) {
   const creds=await getAppCreds();
   let t:any;
   try { t=await unseal<any>(ticket,creds.clientSecret); } catch { return json(400,{error:"invalid_ticket"}); }
-  if(t?.v!==1 || Number(t?.exp)<Date.now()) return json(400,{error:"expired_ticket"});
+  if(t?.v!==1 || !Number.isFinite(t?.exp)||Number(t.exp)<Date.now()) return json(400,{error:"expired_ticket"});
+  const policy=await getClientPolicy();
+  if(policy.enforced&&(!currentAuthEpoch(t.auth_epoch,policy.auth_epoch)||!supportedClientVersion(t.client_version,policy.minimum_version)))return freshLoginRequired();
   if(!safeEqualHex(String(t.install_hash??""),await sha256Hex(installKey))) return json(401,{error:"installation_mismatch"});
   try {
     await rest("streamshield_oauth_redeemed",{method:"POST",headers:{prefer:"return=minimal"},body:JSON.stringify({
@@ -740,7 +801,15 @@ async function handleOauthRedeem(req:Request) {
     if((e as any)?.status===409) return json(409,{error:"ticket_already_redeemed"});
     throw e;
   }
-  return json(200,{ok:true,token:t.token,broadcaster_id:t.broadcaster_id,username:t.username,slug:t.slug});
+  // Only a consumed, install-bound OAuth ticket stamps the current auth epoch.
+  // Registering again with an old access token cannot revive a revoked session.
+  const currentPolicy=await getClientPolicy();
+  if(currentPolicy.enforced&&!currentAuthEpoch(t.auth_epoch,currentPolicy.auth_epoch))return freshLoginRequired();
+  await rest("streamshield_channels?on_conflict=broadcaster_id",{method:"POST",headers:{prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify({
+    broadcaster_id:Number(t.broadcaster_id),username:String(t.username||""),slug:String(t.slug||""),install_key_hash:await sha256Hex(installKey),
+    client_version:String(t.client_version||"")||null,auth_epoch:currentPolicy.auth_epoch,authenticated_at:new Date().toISOString(),last_client_seen_at:new Date().toISOString(),updated_at:new Date().toISOString()
+  })});
+  return json(200,{ok:true,token:t.token,broadcaster_id:t.broadcaster_id,username:t.username,slug:t.slug,auth_epoch:currentPolicy.auth_epoch});
 }
 async function handleOauthRefresh(req:Request) {
   const body:any=await readJson(req);
@@ -761,6 +830,12 @@ async function handleRegister(req: Request) {
     if(!user||!channel) return json(502,{error:"kick_identity_lookup_failed"});
     const broadcasterId=Number(user.user_id);
     if(!Number.isFinite(broadcasterId)||broadcasterId<=0) return json(502,{error:"invalid_kick_identity"});
+    const policy=await getClientPolicy();
+    if(policy.enforced) {
+      const registration=await rest(`streamshield_channels?broadcaster_id=eq.${broadcasterId}&select=install_key_hash,auth_epoch&limit=1`,{headers:{accept:"application/json"}});
+      const saved=(await registration.json())?.[0];
+      if(!saved?.install_key_hash||!safeEqualHex(saved.install_key_hash,await sha256Hex(installKey))||!currentAuthEpoch(saved.auth_epoch,policy.auth_epoch))return freshLoginRequired();
+    }
     const row={broadcaster_id:broadcasterId,username:String(user.name??""),slug:String(channel.slug??""),install_key_hash:await sha256Hex(installKey),registered_at:new Date().toISOString(),updated_at:new Date().toISOString()};
     await rest("streamshield_channels?on_conflict=broadcaster_id",{method:"POST",headers:{prefer:"resolution=merge-duplicates,return=minimal"},body:JSON.stringify(row)});
     return json(200,{ok:true,broadcaster_id:broadcasterId,username:row.username,slug:row.slug,kick_token_stored:false});
@@ -920,6 +995,10 @@ async function handleDeleteData(req:Request) {
 Deno.serve(async (req:Request)=>{
   const path=new URL(req.url).pathname;
   try {
+    if(req.method==="GET"&&path.endsWith("/client/policy"))return await handleClientPolicy();
+    if(req.method==="OPTIONS"&&path.includes("/moderator/"))return new Response(null,{status:204,headers:MOD_CORS});
+    const blocked=await enforceClientPolicy(req,path);if(blocked)return blocked;
+    if(req.method==="GET"&&path.endsWith("/client/session"))return await handleClientSession(req);
     if(req.method==="GET" && (path.endsWith("/health")||path.endsWith("/streamshield-backend"))) {
       try {
         // getAppStatus is itself a database read, so it is sufficient to verify DB
@@ -935,40 +1014,40 @@ Deno.serve(async (req:Request)=>{
       return json(200,{ok:true,release:(await r.json())?.[0]??null});
     }
     if(req.method==="OPTIONS" && path.includes("/moderator/")) return new Response(null,{status:204,headers:MOD_CORS});
-    if(req.method==="POST" && path.endsWith("/moderator/install/invite")) return handleModeratorInstallInvite(req);
-    if(req.method==="GET" && path.endsWith("/moderator/install/access")) return handleModeratorInstallAccess(req);
-    if(req.method==="POST" && path.endsWith("/moderator/install/revoke")) return handleModeratorInstallRevoke(req);
-    if(req.method==="GET" && path.endsWith("/moderator/install/commands")) return handleModeratorInstallCommands(req);
-    if(req.method==="POST" && path.endsWith("/moderator/install/commands/complete")) return handleModeratorInstallCommandComplete(req);
-    if(req.method==="GET" && path.endsWith("/moderator/invite-info")) return handleModeratorInviteInfo(req);
-    if(req.method==="GET" && path.endsWith("/moderator/start")) return handleModeratorStart(req);
-    if(req.method==="GET" && path.endsWith("/moderator/snapshot")) return handleModeratorSnapshot(req);
-    if(req.method==="POST" && path.endsWith("/moderator/command")) return handleModeratorCommand(req);
-    if(req.method==="GET" && path.endsWith("/moderator/command/status")) return handleModeratorCommandStatus(req);
-    if(req.method==="POST" && path.endsWith("/moderator/logout")) return handleModeratorLogout(req);
-    if(req.method==="POST" && path.endsWith("/owner-bootstrap")) return handleOwnerBootstrap(req);
-    if(req.method==="POST" && path.endsWith("/oauth/start")) return handleOauthStart(req);
-    if(req.method==="GET" && path.endsWith("/oauth/kick/callback")) return handleOauthCallback(req);
-    if(req.method==="POST" && path.endsWith("/oauth/redeem")) return handleOauthRedeem(req);
-    if(req.method==="POST" && path.endsWith("/oauth/refresh")) return handleOauthRefresh(req);
-    if(req.method==="POST" && path.endsWith("/register")) return handleRegister(req);
-    if(req.method==="POST" && path.endsWith("/kick-webhook")) return handleWebhook(req);
-    if(req.method==="GET" && path.endsWith("/events")) return handleEvents(req);
-    if(req.method==="GET" && path.endsWith("/status")) return handleStatus(req);
-    if(req.method==="POST" && path.endsWith("/verification/request")) return handleVerificationCreate(req);
-    if(req.method==="GET" && path.endsWith("/verification/start")) return handleVerificationStart(req);
-    if((req.method==="GET"||req.method==="POST") && path.endsWith("/verification/kick")) return handleVerificationKick(req);
-    if(req.method==="GET" && path.endsWith("/verification/queue")) return handleVerificationQueue(req);
-    if(req.method==="GET" && path.endsWith("/verification/recent")) return handleVerificationRecent(req);
-    if(req.method==="POST" && path.endsWith("/verification/complete")) return handleVerificationComplete(req);
-    if((req.method==="GET"||req.method==="POST") && path.endsWith("/network/start")) return handleNetworkOauthStart(req);
-    if(req.method==="GET" && path.endsWith("/network/status")) return handleNetworkStatus(req);
-    if(req.method==="GET" && path.endsWith("/network/history")) return handleNetworkHistory(req);
-    if(req.method==="POST" && path.endsWith("/network/unblock")) return handleNetworkUnblock(req);
-    if(req.method==="POST" && path.endsWith("/network/settings")) return handleNetworkSettings(req);
-    if(req.method==="GET" && path.endsWith("/network/queue")) return handleNetworkQueue(req);
-    if(req.method==="POST" && path.endsWith("/network/queue/complete")) return handleNetworkQueueComplete(req);
-    if(req.method==="POST" && path.endsWith("/delete-data")) return handleDeleteData(req);
+    if(req.method==="POST" && path.endsWith("/moderator/install/invite")) return await handleModeratorInstallInvite(req);
+    if(req.method==="GET" && path.endsWith("/moderator/install/access")) return await handleModeratorInstallAccess(req);
+    if(req.method==="POST" && path.endsWith("/moderator/install/revoke")) return await handleModeratorInstallRevoke(req);
+    if(req.method==="GET" && path.endsWith("/moderator/install/commands")) return await handleModeratorInstallCommands(req);
+    if(req.method==="POST" && path.endsWith("/moderator/install/commands/complete")) return await handleModeratorInstallCommandComplete(req);
+    if(req.method==="GET" && path.endsWith("/moderator/invite-info")) return await handleModeratorInviteInfo(req);
+    if(req.method==="GET" && path.endsWith("/moderator/start")) return await handleModeratorStart(req);
+    if(req.method==="GET" && path.endsWith("/moderator/snapshot")) return await handleModeratorSnapshot(req);
+    if(req.method==="POST" && path.endsWith("/moderator/command")) return await handleModeratorCommand(req);
+    if(req.method==="GET" && path.endsWith("/moderator/command/status")) return await handleModeratorCommandStatus(req);
+    if(req.method==="POST" && path.endsWith("/moderator/logout")) return await handleModeratorLogout(req);
+    if(req.method==="POST" && path.endsWith("/owner-bootstrap")) return await handleOwnerBootstrap(req);
+    if(req.method==="POST" && path.endsWith("/oauth/start")) return await handleOauthStart(req);
+    if(req.method==="GET" && path.endsWith("/oauth/kick/callback")) return await handleOauthCallback(req);
+    if(req.method==="POST" && path.endsWith("/oauth/redeem")) return await handleOauthRedeem(req);
+    if(req.method==="POST" && path.endsWith("/oauth/refresh")) return await handleOauthRefresh(req);
+    if(req.method==="POST" && path.endsWith("/register")) return await handleRegister(req);
+    if(req.method==="POST" && path.endsWith("/kick-webhook")) return await handleWebhook(req);
+    if(req.method==="GET" && path.endsWith("/events")) return await handleEvents(req);
+    if(req.method==="GET" && path.endsWith("/status")) return await handleStatus(req);
+    if(req.method==="POST" && path.endsWith("/verification/request")) return await handleVerificationCreate(req);
+    if(req.method==="GET" && path.endsWith("/verification/start")) return await handleVerificationStart(req);
+    if((req.method==="GET"||req.method==="POST") && path.endsWith("/verification/kick")) return await handleVerificationKick(req);
+    if(req.method==="GET" && path.endsWith("/verification/queue")) return await handleVerificationQueue(req);
+    if(req.method==="GET" && path.endsWith("/verification/recent")) return await handleVerificationRecent(req);
+    if(req.method==="POST" && path.endsWith("/verification/complete")) return await handleVerificationComplete(req);
+    if((req.method==="GET"||req.method==="POST") && path.endsWith("/network/start")) return await handleNetworkOauthStart(req);
+    if(req.method==="GET" && path.endsWith("/network/status")) return await handleNetworkStatus(req);
+    if(req.method==="GET" && path.endsWith("/network/history")) return await handleNetworkHistory(req);
+    if(req.method==="POST" && path.endsWith("/network/unblock")) return await handleNetworkUnblock(req);
+    if(req.method==="POST" && path.endsWith("/network/settings")) return await handleNetworkSettings(req);
+    if(req.method==="GET" && path.endsWith("/network/queue")) return await handleNetworkQueue(req);
+    if(req.method==="POST" && path.endsWith("/network/queue/complete")) return await handleNetworkQueueComplete(req);
+    if(req.method==="POST" && path.endsWith("/delete-data")) return await handleDeleteData(req);
     return json(404,{error:"not_found"});
   } catch(e) {
     const status=(e as any)?.status===413?413:500;

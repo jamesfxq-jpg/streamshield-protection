@@ -10,7 +10,7 @@
   if(compact) document.body.classList.add("mod-panel-compact");
 
   const error=document.getElementById("mod-error");
-  const headers=()=>({"x-streamshield-mod-session":session,accept:"application/json"});
+  const headers=()=>({"x-streamshield-mod-session":session,"x-streamshield-client-version":"0.6.0-beta.14",accept:"application/json"});
   const fail=(m)=>{error.hidden=false;error.textContent=m;};
   const clearError=()=>{error.hidden=true;error.textContent="";};
   const fmt=v=>v?new Date(v).toLocaleString():"—";
@@ -19,13 +19,19 @@
   async function get(path){
     const r=await fetch(BACKEND+path,{headers:headers(),cache:"no-store"});
     const data=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(data.error||"Request failed");
+    if(!r.ok) {
+      if(r.status===401||r.status===426){sessionStorage.removeItem("streamshield_mod_session");session="";location.replace("/update");}
+      throw new Error(data.message||data.error||"Request failed");
+    }
     return data;
   }
   async function post(path,body={}){
     const r=await fetch(BACKEND+path,{method:"POST",headers:{...headers(),"content-type":"application/json"},body:JSON.stringify(body)});
     const data=await r.json().catch(()=>({}));
-    if(!r.ok) throw new Error(data.error||"Request failed");
+    if(!r.ok) {
+      if(r.status===401||r.status===426){sessionStorage.removeItem("streamshield_mod_session");session="";location.replace("/update");}
+      throw new Error(data.message||data.error||"Request failed");
+    }
     return data;
   }
   const sleep=ms=>new Promise(r=>setTimeout(r,ms));

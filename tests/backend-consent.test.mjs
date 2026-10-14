@@ -6,7 +6,8 @@ import { webcrypto } from 'node:crypto';
 
 const origin='https://streamshield-protection-public.vercel.app';
 const base='https://blrdvuhnxtwnsphdxpkg.supabase.co/functions/v1/streamshield-backend';
-const source=fs.readFileSync(new URL('../supabase/functions/streamshield-backend/index.ts',import.meta.url),'utf8').replace(/^import "jsr:[^\n]+\n/,'');
+const source=fs.readFileSync(new URL('../supabase/functions/streamshield-backend/index.ts',import.meta.url),'utf8').replace(/^import .+;\n/gm,'');
+const policySource=fs.readFileSync(new URL('../supabase/functions/streamshield-backend/clientPolicy.ts',import.meta.url),'utf8').replace(/export /g,'');
 const calls=[];
 let recordResult={id:'fixture-request',status:'verified'};
 const pending={id:'fixture-request',status:'pending',broadcaster_id:101,kick_user_id:202};
@@ -24,9 +25,9 @@ const context=vm.createContext({
   },
   mockRest:async(path,options={})=>{calls.push({type:'rest',path,options});return Response.json([]);},
 });
-vm.runInContext(stripTypeScriptTypes(source),context);
+vm.runInContext(stripTypeScriptTypes(policySource+"\n"+source),context);
 vm.runInContext(`
-  rpc=mockRpc; rest=mockRest;
+  rpc=mockRpc; rest=mockRest; getClientPolicy=async()=>({enforced:false,minimum_version:"0.6.0-beta.14",auth_epoch:0,force_reauth_after:null});
   getAppCreds=async()=>({clientId:'fixture-client',clientSecret:'fixture-secret'});
   verifyKick=async()=>true; cleanupExpired=async()=>{};
   authorizeInstall=async()=>false;

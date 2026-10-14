@@ -12,7 +12,7 @@ const packageRoot=process.env.QA_PACKAGE_ROOT||fileURLToPath(new URL('../desktop
 const data=await mkdtemp(join(tmpdir(),'streamshield-runtime-qa-'));
 const store=new RuntimeStore(data);await store.init();
 const s=store.createSession({broadcasterId:910000001,username:'QA Fixture',slug:'qa_fixture',token:{access_token:'fake_qa_token',refresh_token:'fake_qa_refresh',expires_in:3600},tokenExpiresAt:Date.now()+3600000,isLive:false});
-s.remoteBackendRegistered=true;s.remoteInstallKey='synthetic_install_key_for_runtime_qa_1234567890';s.remoteBackendError='QA fixture: relay is unreachable';s.networkProtection={enabled:true,auto_ban_exact_network_match:false,blocked_networks:1};s.subscriptionHealthy=true;s.lastSubscriptionCheckAt=Date.now();s.lastPollAt=Date.now();
+s.authClientVersion='0.6.0-beta.14';s.remoteBackendRegistered=true;s.remoteInstallKey='synthetic_install_key_for_runtime_qa_1234567890';s.remoteBackendError='QA fixture: relay is unreachable';s.networkProtection={enabled:true,auto_ban_exact_network_match:false,blocked_networks:1};s.subscriptionHealthy=true;s.lastSubscriptionCheckAt=Date.now();s.lastPollAt=Date.now();
 await store.persistSessions();
 const port=18897,base='http://localhost:'+port;
 const child=spawn(process.execPath,['--import',fixturePath,packageRoot+'/app/dist/src/server.js'],{cwd:packageRoot+'/app',env:{...process.env,DATA_DIR:data,PORT:String(port),PUBLIC_BASE_URL:base,STREAMSHIELD_REMOTE_BACKEND_URL:'https://qa.invalid',KICK_CLIENT_ID:'',KICK_CLIENT_SECRET:''},stdio:['ignore','pipe','pipe']});

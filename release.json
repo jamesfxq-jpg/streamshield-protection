@@ -1,10 +1,10 @@
 {
-  "version": "0.6.0-beta.13",
+  "version": "0.6.0-beta.14",
   "channel": "beta",
-  "filename": "StreamShield-Protection-0.6.0-beta.13-Windows.zip",
-  "download_url": "https://streamshield-protection-public.vercel.app/releases/StreamShield-Protection-0.6.0-beta.13-Windows.zip",
-  "sha256": "9cbac5f0df9bb9bcc907af56d8f212e8ea5b5efd7d4dce05131ae785475d1823",
-  "size_bytes": 2732326,
-  "published_at": "2026-10-14T01:58:08Z",
-  "notes": "Quiet Shield: review-first network setup, Ban & Shield status, neutral verification messages, safe active-link reuse, duplicate-click protection, and current-policy checks before queued network enforcement. No additional OAuth permissions or database migration."
+  "filename": "StreamShield-Protection-0.6.0-beta.14-Windows.zip",
+  "download_url": "https://streamshield-protection-public.vercel.app/releases/StreamShield-Protection-0.6.0-beta.14-Windows.zip",
+  "sha256": "936a482919ecd3147d828c7946fbc0ac449b91ae1d872de7d79804ef8cd673b0",
+  "size_bytes": 2733835,
+  "published_at": "2026-10-14T02:36:27Z",
+  "notes": "Quiet Shield Beta 14: clearer setup and how-it-works guide, unified version reporting, fresh StreamShield sign-in, and server-controlled required updates. Install, reconnect, and run Pre-Stream Check. Saved settings and bans are retained."
 }

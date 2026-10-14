@@ -43,3 +43,9 @@
 .verify-minimal-shell .verify-disclosure{font-size:14px;line-height:1.65;margin-top:20px;color:#b5c4d0}
 .verify-minimal-shell .verify-disclosure a{text-decoration:underline;text-underline-offset:3px}
 .verify-only-button:focus-visible{outline:3px solid #fff;outline-offset:4px}
+
+/* Keep long release checksums and grid content within narrow viewports. */
+code{overflow-wrap:anywhere;word-break:break-word}
+.grid>*{min-width:0}
+.steps li{grid-template-columns:36px minmax(0,1fr)}
+.steps li>div{min-width:0}

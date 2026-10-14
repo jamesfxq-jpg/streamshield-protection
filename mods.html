@@ -1,53 +1,10 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
-<title>StreamShield Moderator Guide</title>
-<meta name="description" content="Simple StreamShield workflow for KICK streamers and human moderators: verification, moderation, IP-ban review, and Compact Control.">
-<link rel="canonical" href="https://streamshield-protection-public.vercel.app/mods">
-<link rel="icon" href="/assets/brand/streamshield-shield-badge.png" type="image/png">
-<link rel="stylesheet" href="/assets/site.css">
-</head>
-<body>
-<a class="skip-link" href="#main">Skip to content</a>
-<div class="wrap">
-<nav class="site-nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/brand/streamshield-shield-badge.png" width="43" height="39" alt="">StreamShield Protection</a><div class="nav-links"><a href="/">Home</a><a href="#current">Current beta</a><a href="#verify">Verification</a><a href="#compact">Compact Control</a><a href="/beta">Beta testing</a></div></nav>
-<main id="main">
-<section class="hero beta-hero"><img class="hero-logo" src="/assets/brand/streamshield-shield-badge.png" width="104" height="93" alt="StreamShield shield"><span class="badge">STREAMER + MODERATOR GUIDE</span><h1>Simple tools for the people protecting the chat.</h1><p class="lead">The streamer chooses exactly which KICK accounts get StreamShield access. Selected moderators connect with their own KICK account and receive a separate remote Mod Dashboard with a Compact Pop-Out.</p></section>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><title>Moderator guide · StreamShield</title>
+<meta name="description" content="Learn the streamer and moderator setup for verification, Ban &amp; Shield, case files, compact controls, and recovery."><link rel="canonical" href="https://streamshield-protection-public.vercel.app/mods">
 
-<section id="current" class="section grid two">
-<article class="card tint"><div class="eyebrow">Streamer control</div><h2>Select only the mods you want.</h2><p>Have the moderator send one message in KICK chat, then click <strong>Invite Mod</strong> beside that exact account in StreamShield. The invite is bound to that KICK user ID and expires if unused.</p><p>The streamer can see approved and pending moderators under <strong>Moderator Access</strong> and revoke access at any time.</p></article>
-<article class="card"><div class="eyebrow">Remote moderator access</div><h2>The mod gets their own dashboard.</h2><p>The selected moderator opens the private invite, clicks <strong>Connect with KICK</strong>, and signs in with their own KICK account. StreamShield then opens a restricted remote Mod Dashboard with a Compact Pop-Out.</p><p>No streamer password, OAuth token, stream key, Windows login, Full Protection settings, data-delete controls, or full viewer IP addresses are exposed to the mod.</p></article>
-</section>
-
-<section id="verify" class="section card ip-ban-section">
-<div class="eyebrow">Targeted verification</div><h2>Select → Send → Verified.</h2>
-<div class="verify-fast-flow">
-<article class="verify-fast-step"><div class="verify-fast-icon">1</div><div><span class="verify-role">MOD</span><h4>Select</h4><p>In Recent KICK Chat, click <strong>Verify</strong> beside the viewer.</p></div></article>
-<div class="verify-arrow" aria-hidden="true">→</div>
-<article class="verify-fast-step"><div class="verify-fast-icon">2</div><div><span class="verify-role">STREAMSHIELD</span><h4>Send</h4><p>StreamShield locks that account temporarily and automatically replies <strong>directly to the selected chatter’s KICK message</strong> when the message ID is available. The reply contains the @username + one-time verification link.</p></div></article>
-<div class="verify-arrow" aria-hidden="true">→</div>
-<article class="verify-fast-step"><div class="verify-fast-icon">3</div><div><span class="verify-role">VIEWER</span><h4>Verified</h4><p>The viewer selects <strong>Continue with KICK</strong>. The wrong KICK account is rejected; a clean result can restore chat.</p></div></article>
-</div>
-<div class="verify-callout"><strong>Automatic KICK chat reply</strong><div class="code verify-message">@username — StreamShield verification is required. Open this one-time link and select Continue with KICK: [verification link]</div></div><p class="mini">This is a public KICK chat reply, not a private DM. The link is still bound to the exact KICK account the moderator selected. If KICK cannot auto-post the reply, StreamShield copies this same message as the fallback.</p>
-</section>
-
-<section id="compact" class="section card">
-<div class="eyebrow">Live moderation windows</div><h2>Use the small window that matches your role.</h2>
-<p><strong>Streamer:</strong> click <strong>Compact Control</strong> in the local StreamShield dashboard. <strong>Selected remote mod:</strong> click <strong>Compact Pop-Out</strong> in the remote Mod Dashboard. Keep either small window beside KICK or OBS.</p>
-<div class="grid">
-<article class="card"><h3>Recent chat</h3><p>See the latest chatters and use quick Case, Verify, 10-minute timeout, Ban, and Unban controls.</p></article>
-<article class="card"><h3>Verification queue</h3><p>See which selected viewers are waiting, verified, blocked, or need review. Restore chat manually when appropriate.</p></article>
-<article class="card"><h3>Network &amp; ban controls</h3><p>Review blocked verified networks by masked network ID and use UN-IP BAN when a network block needs to be reversed. Full viewer IP addresses are never shown to moderators.</p></article>
-</div>
-<div class="notice"><p><strong>Recommended moderator routine:</strong> keep KICK chat open normally, keep Compact Control beside it, use Verify only for accounts you actually want checked, and review network matches before escalating moderation.</p></div>
-</section>
-
-<section class="section card tint">
-<div class="eyebrow">Remote Mod Dashboard</div><h2>Built for selected human moderators.</h2>
-<p>Remote mods can review recent KICK chat, Delete messages, Require Verification, Timeout 10m, Permanent Ban, Unban, open Case Files, watch the verification queue, and review masked blocked-network IDs. When a remote mod clicks <strong>Verify</strong>, StreamShield automatically posts the verification reply through the streamer’s authorized KICK connection. Their commands are executed by the streamer’s authorized StreamShield desktop, which must remain running.</p>
-<p><strong>Compact Pop-Out:</strong> the moderator can open a smaller always-on-top-sized browser window for live moderation without keeping the full dashboard on screen.</p>
-</section>
-</main>
-<footer class="site-footer">StreamShield Protection · Moderator Guide<div class="footer-links"><a href="/">Home</a><a href="/beta">Beta testing</a><a href="/privacy">Privacy</a><a href="/terms">Terms &amp; Safe Use</a></div></footer>
-</div></body></html>
+<link rel="icon" href="/assets/brand/streamshield-shield-badge.png" type="image/png"><link rel="stylesheet" href="/assets/site.css">
+</head><body><a class="skip-link" href="#main">Skip to content</a><div class="wrap">
+<nav class="site-nav" aria-label="Main navigation"><a class="brand" href="/"><img src="/assets/brand/streamshield-shield-badge.png" width="43" height="39" alt="">StreamShield Protection</a><div class="nav-links"><a href="/how-it-works">How it works</a><a href="/#features">Features</a><a href="/mods">For moderators</a><a href="/update">Get the update</a><a href="/beta">Beta feedback</a></div></nav>
+<main id="main"><section class="hero"><span class="badge">FOR STREAMERS AND SELECTED MODERATORS</span><h1>Keep the next moderation action close at hand.</h1><p class="lead">Recent chat, verification results, case history, and recovery controls—without switching between a pile of separate tools.</p></section><section class="section grid two"><article class="card tint"><h2>Streamer setup</h2><p>Install the current Windows build, connect KICK, and run Pre-Stream Check. Enable Network Shield with the review-first preset. Open Compact Control beside your normal chat and streaming tools.</p><p>Use <strong>Invite Mod</strong> for a selected account. Share that private invite with its intended recipient, who signs in with their own KICK account.</p></article><article class="card"><h2>Moderator setup</h2><p>Open your private invite, choose Continue with KICK, and use the invited account. The restricted Mod Dashboard includes a Compact Pop-Out for a smaller workspace.</p><p>The streamer’s desktop must stay open and connected to execute remote commands. A queued action is still waiting; check for a completed result before relying on it.</p></article></section><section class="section card"><h2>The controls you will use most.</h2><div class="grid"><article><h3>Verify / Resend</h3><p>Request an account-bound verification check and let StreamShield deliver the link. Resend an active request without applying another timeout.</p></article><article><h3>Delete / Timeout</h3><p>Remove a selected message or temporarily restrict a specific account. Check the outcome in the action history.</p></article><article><h3>Ban &amp; Shield</h3><p>Apply the account ban and check retained verified network history. A “still syncing” or “unavailable” network result is distinct from the completed account ban.</p></article><article><h3>Case files</h3><p>Review recent messages, prior actions, verification results, and masked network history before escalating a decision.</p></article><article><h3>Recovery Center</h3><p>Reverse supported recent actions in the streamer controls. Review any separate account ban and network block individually.</p></article><article><h3>Remove Network Block</h3><p>Use the streamer’s network controls to reverse the network block when needed. The KICK account’s unban is a separate decision.</p></article></div></section><section class="section card tint"><h2>Recommended routine.</h2><p>Keep normal KICK chat visible. Use verification only for accounts you need checked. Review possible network or browser-token matches alongside behavior and history. Check the completed result after each action.</p><p><strong>After a required update:</strong> the streamer installs the current build and reconnects. Web moderators reload the current page and sign in again through a valid invite; the streamer can issue a fresh invite when needed.</p><div class="actions"><a class="button" href="/how-it-works">See the full verification flow</a><a class="button secondary" href="/update">Update instructions</a></div></section></main>
+<footer class="site-footer">StreamShield Protection · Windows 0.6.0-beta.14 · Built for KICK communities.<br>Independent software, not affiliated with KICK. Beta release.<div class="footer-links"><a href="/how-it-works">How it works</a><a href="/mods">Moderator guide</a><a href="/update">Updates</a><a href="/beta#feedback">Feedback</a><a href="/privacy">Privacy &amp; data controls</a><a href="/terms">Terms</a></div></footer></div></body></html>
