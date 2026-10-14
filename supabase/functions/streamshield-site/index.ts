@@ -1,6 +1,8 @@
 const ORIGIN = "https://streamshield-protection-public.vercel.app";
-const VERSION = "0.6.0-beta.12";
-const SHA256 = "2e9d0e557cf2b37e6a27ff834b621b5ddb6857be4af000b0f12af47b2d6e1292";
+const VERSION = "0.6.0-beta.14";
+// Preserve the previously advertised link as an alias to the current build.
+const ACCEPTED_VERSIONS = new Set([VERSION, "0.6.0-beta.12"]);
+const SHA256 = "936a482919ecd3147d828c7946fbc0ac449b91ae1d872de7d79804ef8cd673b0";
 const ZIP = `/releases/StreamShield-Protection-${VERSION}-Windows.zip`;
 
 Deno.serve((req: Request) => {
@@ -17,7 +19,7 @@ Deno.serve((req: Request) => {
   const isDownload = path.endsWith("/download");
   if (isDownload) {
     const versions = url.searchParams.getAll("version");
-    if (versions.length > 1 || (versions.length === 1 && versions[0] !== VERSION)) {
+    if (versions.length > 1 || (versions.length === 1 && !ACCEPTED_VERSIONS.has(versions[0]))) {
       return new Response(null, { status: 404, headers });
     }
     headers["X-StreamShield-Version"] = VERSION;

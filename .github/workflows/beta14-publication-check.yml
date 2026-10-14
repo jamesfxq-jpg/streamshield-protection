@@ -1,0 +1,100 @@
+name: Beta 14 publication check
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/functions/streamshield-site/**'
+      - 'supabase/functions/streamshield-download/**'
+      - 'tests/download-redirects.test.mjs'
+      - '.github/workflows/beta14-publication-check.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.3'
+      - name: Test exact redirect source without network
+        run: node tests/download-redirects.test.mjs
+      - name: Verify live release and aliases without login or moderation
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib,json,urllib.request,urllib.error
+          from urllib.parse import urlsplit
+          from pathlib import Path
+          from datetime import datetime,timezone
+          SITE='https://streamshield-protection-public.vercel.app'
+          EDGE='https://blrdvuhnxtwnsphdxpkg.supabase.co/functions/v1'
+          BACKEND=EDGE+'/streamshield-backend'
+          VERSION='0.6.0-beta.14'
+          SHA='936a482919ecd3147d828c7946fbc0ac449b91ae1d872de7d79804ef8cd673b0'
+          ZIP=SITE+'/releases/StreamShield-Protection-'+VERSION+'-Windows.zip'
+          results=[]
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,*args,**kwargs): return None
+          no_redirect=urllib.request.build_opener(NoRedirect)
+          def get(url,limit=6_000_000):
+              request=urllib.request.Request(url,headers={'Cache-Control':'no-cache','Accept':'*/*'})
+              with urllib.request.urlopen(request,timeout=20) as response:
+                  assert response.status==200
+                  assert urlsplit(response.url).hostname==urlsplit(url).hostname
+                  body=response.read(limit+1)
+                  assert len(body)<=limit
+                  return body
+          try:
+              manifest=json.loads(get(SITE+'/release.json',100_000))
+              assert manifest['version']==VERSION and manifest['sha256']==SHA
+              raw=get(ZIP)
+              assert len(raw)==2733835 and hashlib.sha256(raw).hexdigest()==SHA
+              results.append({'check':'public_zip','bytes':len(raw),'sha256':SHA,'passed':True})
+              latest=json.loads(get(BACKEND+'/release/latest',100_000))['release']
+              assert latest['version']==VERSION and latest['sha256']==SHA and latest['download_url']==ZIP
+              health=json.loads(get(BACKEND+'/health',100_000))
+              assert health['ok'] and health['database'] and health['public_version']==VERSION
+              policy=json.loads(get(BACKEND+'/client/policy',100_000))
+              assert policy['minimum_version']==VERSION and policy['download_url']==ZIP and policy['release_sha256']==SHA
+              results.append({'check':'release_health_policy','passed':True,'enforced':policy['enforced'],'auth_epoch':policy['auth_epoch']})
+              for endpoint in ['/streamshield-site/download','/streamshield-download']:
+                  for suffix in ['', '?version='+VERSION,'?version=0.6.0-beta.12']:
+                      try:
+                          response=no_redirect.open(urllib.request.Request(EDGE+endpoint+suffix,method='HEAD'),timeout=15)
+                      except urllib.error.HTTPError as e:
+                          response=e
+                      with response:
+                          assert response.code==302,(endpoint,suffix,response.code)
+                          assert response.headers.get('Location')==ZIP
+                          assert response.headers.get('X-StreamShield-Version')==VERSION
+                          assert response.headers.get('X-StreamShield-Sha256')==SHA
+                          assert 'no-store' in response.headers.get('Cache-Control','')
+                      results.append({'check':'download_alias','path':endpoint+suffix,'passed':True})
+              # Verify the preserved old deployment before anyone records it as a rollback URL.
+              old='https://streamshield-protection-public-1dg06982v-jamesfxq-2637.vercel.app/releases/StreamShield-Protection-0.6.0-beta.12-Windows.zip'
+              try:
+                  old_raw=get(old)
+                  old_sha=hashlib.sha256(old_raw).hexdigest()
+                  assert old_sha=='2e9d0e557cf2b37e6a27ff834b621b5ddb6857be4af000b0f12af47b2d6e1292'
+                  results.append({'check':'old_release_snapshot','passed':True,'url':old,'sha256':old_sha,'bytes':len(old_raw)})
+              except Exception as e:
+                  results.append({'check':'old_release_snapshot','passed':False,'error_type':type(e).__name__})
+              print('PASS: Current ZIP, published release metadata, health, policy and six download aliases. No sign-in or session mutation.')
+          except Exception as e:
+              results.append({'check':'publication','passed':False,'error':str(e)[:250]})
+              raise
+          finally:
+              Path('publication-check.json').write_text(json.dumps({'checked_at':datetime.now(timezone.utc).isoformat(),'results':results},indent=2))
+              print(json.dumps(results,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: streamshield-beta14-publication-check
+          path: publication-check.json
+          retention-days: 14
